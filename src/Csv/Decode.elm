@@ -7,100 +7,105 @@ type Decoder a
     = TODODecoder
 
 
-string : Decoder String
+
+{-
+
+   string : Decoder String
 
 
-bool : Decoder Bool
+   bool : Decoder Bool
 
 
-int : Decoder Int
+   int : Decoder Int
 
 
-float : Decoder Float
-
-
-
--- DATA STRUCTURES
-
-
-nullable : Decoder a -> Decoder (Maybe a)
+   float : Decoder Float
 
 
 
--- escape hatch to JSON?
--- list
--- array
--- dict
--- keyValuePairs
--- oneOrMore
-----------
--- OBJECT PRIMITIVES
+
+      -- DATA STRUCTURES
 
 
-field : String -> Decoder a -> Decoder a
-
-
-index : Int -> Decoder a -> Decoder a
+      nullable : Decoder a -> Decoder (Maybe a)
 
 
 
--- at
-----------
--- INCONSISTENT STRUCTURE
+      -- escape hatch to JSON?
+      -- list
+      -- array
+      -- dict
+      -- keyValuePairs
+      -- oneOrMore
+      ----------
+      -- OBJECT PRIMITIVES
 
 
-maybe : Decoder a -> Decoder (Maybe a)
+      field : String -> Decoder a -> Decoder a
 
 
-oneOf : List (Decoder a) -> Decoder a
-
-
-
--- RUN DECODERS
-
-
-decodeString : Decoder a -> String -> Result Error a
-
-
-decodeValue : Decoder a -> Value -> Result Error a
-
-
-type Value
-    = TODODefinedElsewhere
-
-
-type Error
-    = TODOError
-
-
-errorToString : Error -> String
+      index : Int -> Decoder a -> Decoder a
 
 
 
--- MAPPING
+      -- at
+      ----------
+      -- INCONSISTENT STRUCTURE
 
 
-map : (from -> to) -> Decoder from -> Decoder to
+      maybe : Decoder a -> Decoder (Maybe a)
+
+
+      oneOf : List (Decoder a) -> Decoder a
 
 
 
--- map2, map3, map4, map5, map6, map7, map8
--- FANCY DECODING
+      -- RUN DECODERS
 
 
-lazy : (() -> Decoder a) -> Decoder a
+      decodeString : Decoder a -> String -> Result Error a
 
 
-value : Decoder Value
+      decodeValue : Decoder a -> Value -> Result Error a
 
 
-null : a -> Decoder a
+      type Value
+          = TODODefinedElsewhere
 
 
-succeed : a -> Decoder a
+      type Error
+          = TODOError
 
 
-fail : String -> Decoder a
+      errorToString : Error -> String
 
 
-andThen : (from -> Decoder to) -> Decoder from -> Decoder to
+
+      -- MAPPING
+
+
+      map : (from -> to) -> Decoder from -> Decoder to
+
+
+
+      -- map2, map3, map4, map5, map6, map7, map8
+      -- FANCY DECODING
+
+
+      lazy : (() -> Decoder a) -> Decoder a
+
+
+      value : Decoder Value
+
+
+      null : a -> Decoder a
+
+
+      succeed : a -> Decoder a
+
+
+      fail : String -> Decoder a
+
+
+      andThen : (from -> Decoder to) -> Decoder from -> Decoder to
+-}
