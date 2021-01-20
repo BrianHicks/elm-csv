@@ -23,20 +23,28 @@ type Problem
 
 parser : Parser Context Problem (List (List String))
 parser =
-    Parser.succeed (\field -> [ field ])
-        |= rowParser
+    Parser.loop [] <|
+        \soFar ->
+            Parser.oneOf
+                [ Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
+                    |= Parser.end ExpectingEnd
+                , Parser.succeed (\row -> Parser.Loop (row :: soFar))
+                    |= rowParser
+                ]
 
 
 rowParser : Parser Context Problem (List String)
 rowParser =
     Parser.inContext Row <|
-        Parser.loop
-            []
-            (\soFar ->
+        Parser.loop [] <|
+            \soFar ->
                 Parser.oneOf
                     [ -- if the row is done, get out!
                       Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
-                        |= Parser.end ExpectingEnd
+                        |= Parser.oneOf
+                            [ Parser.end ExpectingEnd
+                            , Parser.token (Parser.Token "\n" ExpectingRowSeparator)
+                            ]
                     , -- if we see a field separator, it MUST be followed
                       -- by a field
                       Parser.succeed (\field -> Parser.Loop (field :: soFar))
@@ -47,7 +55,6 @@ rowParser =
                       Parser.succeed (\field -> Parser.Loop (field :: soFar))
                         |= fieldParser
                     ]
-            )
 
 
 fieldParser : Parser Context Problem String
