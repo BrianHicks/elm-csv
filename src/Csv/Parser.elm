@@ -9,13 +9,28 @@ parse =
 
 
 type Context
-    = TODOContext
+    = Row
+    | Field
 
 
 type Problem
-    = TODOProblem
+    = ExpectingRowSeparator
+    | ExpectingFieldSeparator
+    | ExpectingEnd
+      --
+    | Unimplemented
 
 
 parser : Parser Context Problem (List (List String))
 parser =
-    Parser.problem TODOProblem
+    Parser.succeed (\field -> [ [ field ] ])
+        |= fieldParser
+
+
+fieldParser : Parser Context Problem String
+fieldParser =
+    Parser.inContext Field <|
+        Parser.oneOf
+            [ Parser.chompWhile (\c -> c /= ',' && c /= '\n')
+                |> Parser.getChompedString
+            ]
