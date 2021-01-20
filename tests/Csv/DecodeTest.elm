@@ -93,3 +93,14 @@ columnTest =
                     |> Expect.equal
                         (Err { row = 0, problem = Decode.ExpectedColumn 1 })
         ]
+
+
+mapTest : Test
+mapTest =
+    describe "map"
+        [ test "can map a value" <|
+            \_ ->
+                "5"
+                    |> Decode.decodeCsvString (Decode.int (Decode.column 0) |> Decode.map (\i -> i * 2))
+                    |> Expect.equal (Ok [ 10 ])
+        ]

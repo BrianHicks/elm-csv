@@ -180,12 +180,6 @@ errorToString _ =
 {-
 
    -- MAPPING
-
-
-   map : (from -> to) -> Decoder from -> Decoder to
-
-
-
    -- map2, map3, map4, map5, map6, map7, map8
    -- FANCY DECODING
 
@@ -207,3 +201,8 @@ errorToString _ =
 
    andThen : (from -> Decoder to) -> Decoder from -> Decoder to
 -}
+
+
+map : (from -> to) -> Decoder from -> Decoder to
+map transform (Decoder decoder) =
+    Decoder (decoder >> Result.map (List.map transform))
