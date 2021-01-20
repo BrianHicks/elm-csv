@@ -242,3 +242,19 @@ succeed value =
 fail : String -> Decoder a
 fail message =
     Decoder (\_ -> Err (Failure message))
+
+
+andThen : (a -> Decoder b) -> Decoder a -> Decoder b
+andThen next (Decoder first) =
+    Decoder
+        (\row ->
+            first row
+                |> Result.andThen
+                    (\nextValue ->
+                        let
+                            (Decoder final) =
+                                next nextValue
+                        in
+                        final row
+                    )
+        )

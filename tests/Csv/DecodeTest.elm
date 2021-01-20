@@ -1,6 +1,6 @@
 module Csv.DecodeTest exposing (..)
 
-import Csv.Decode as Decode
+import Csv.Decode as Decode exposing (Decoder)
 import Expect
 import Test exposing (..)
 
@@ -166,4 +166,68 @@ failTest =
                             , row = 0
                             }
                         )
+        ]
+
+
+andThenTest : Test
+andThenTest =
+    describe "andThen"
+        [ describe "for validation" <|
+            let
+                positiveInteger : Decode.Location -> Decoder Int
+                positiveInteger location =
+                    Decode.int location
+                        |> Decode.andThen
+                            (\value ->
+                                if value > 0 then
+                                    Decode.succeed value
+
+                                else
+                                    Decode.fail "Only positive integers are allowed!"
+                            )
+            in
+            [ test "allows positive integers" <|
+                \_ ->
+                    "1"
+                        |> Decode.decodeCsvString (positiveInteger (Decode.column 0))
+                        |> Expect.equal (Ok [ 1 ])
+            , test "disallows negative integers" <|
+                \_ ->
+                    "-1"
+                        |> Decode.decodeCsvString (positiveInteger (Decode.column 0))
+                        |> Expect.equal
+                            (Err
+                                { problem = Decode.Failure "Only positive integers are allowed!"
+                                , row = 0
+                                }
+                            )
+            ]
+        , describe "for fields depending on each other" <|
+            let
+                followThePointer : Decoder String
+                followThePointer =
+                    Decode.int (Decode.column 0)
+                        |> Decode.andThen (\column -> Decode.string (Decode.column column))
+            in
+            [ test "get the second column" <|
+                \_ ->
+                    "1,a,b"
+                        |> Decode.decodeCsvString followThePointer
+                        |> Expect.equal (Ok [ "a" ])
+            , test "get the third column" <|
+                \_ ->
+                    "2,a,b"
+                        |> Decode.decodeCsvString followThePointer
+                        |> Expect.equal (Ok [ "b" ])
+            , test "has a reasonable error message for missing a column" <|
+                \_ ->
+                    "3,a,b"
+                        |> Decode.decodeCsvString followThePointer
+                        |> Expect.equal
+                            (Err
+                                { problem = Decode.ExpectedColumn 3
+                                , row = 0
+                                }
+                            )
+            ]
         ]
