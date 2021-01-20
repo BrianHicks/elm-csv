@@ -29,4 +29,8 @@ parseTest =
                             , [ "c", "d" ]
                             ]
                         )
+        , test "blank fields" <|
+            \_ ->
+                parse ",,"
+                    |> Expect.equal (Ok [ [ "", "", "" ] ])
         ]

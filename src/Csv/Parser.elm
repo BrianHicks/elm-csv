@@ -33,26 +33,26 @@ parser =
 
 rowParser : Parser Context Problem (List String)
 rowParser =
-    Parser.inContext Row <|
-        Parser.loop [] <|
-            \soFar ->
-                Parser.oneOf
-                    [ -- if the row is done, get out!
-                      Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
-                        |= Parser.oneOf
-                            [ Parser.end ExpectingEnd
-                            , Parser.token (Parser.Token "\n" ExpectingRowSeparator)
-                            ]
-                    , -- if we see a field separator, it MUST be followed
-                      -- by a field
-                      Parser.succeed (\field -> Parser.Loop (field :: soFar))
-                        |. Parser.token (Parser.Token "," ExpectingFieldSeparator)
-                        |= fieldParser
-                    , -- ... except at the beginning of the row, where there
-                      -- must not be a separator.
-                      Parser.succeed (\field -> Parser.Loop (field :: soFar))
-                        |= fieldParser
-                    ]
+    Parser.inContext Row
+        (Parser.succeed (::)
+            |= fieldParser
+            |= Parser.loop []
+                (\soFar ->
+                    Parser.oneOf
+                        [ -- if we see a field separator, it MUST be followed
+                          -- by a field
+                          Parser.succeed (\field -> Parser.Loop (field :: soFar))
+                            |. Parser.token (Parser.Token "," ExpectingFieldSeparator)
+                            |= fieldParser
+                        , -- if the row is done, get out!
+                          Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
+                            |= Parser.oneOf
+                                [ Parser.end ExpectingEnd
+                                , Parser.token (Parser.Token "\n" ExpectingRowSeparator)
+                                ]
+                        ]
+                )
+        )
 
 
 fieldParser : Parser Context Problem String
