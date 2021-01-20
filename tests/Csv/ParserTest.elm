@@ -71,7 +71,7 @@ parseTest =
                                 [ [ "a" ]
                                 , [ "b" ]
                                 ]
-                    , test "two rows of  two fields" <|
+                    , test "two rows of two fields" <|
                         \_ ->
                             expectRoundTrip config
                                 [ [ "a", "b" ]
