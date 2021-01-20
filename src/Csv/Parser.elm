@@ -61,12 +61,14 @@ parse (Config internalConfig) =
 type Context
     = Row
     | Field
+    | QuotedField
 
 
 type Problem
     = ExpectingRowSeparator String
     | ExpectingFieldSeparator String
     | ExpectingQuote
+    | ExpectingEscapedQuote
     | ExpectingEnd
 
 
@@ -108,15 +110,30 @@ rowParser config_ =
 
 fieldParser : InternalConfig -> Parser Context Problem String
 fieldParser config_ =
-    Parser.inContext Field <|
-        Parser.oneOf
-            [ Parser.succeed identity
-                |. Parser.token quote
-                |= Parser.getChompedString (Parser.chompWhile (\c -> c /= literalQuote))
-                |. Parser.token quote
-            , Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
-                |> Parser.getChompedString
-            ]
+    Parser.oneOf
+        [ quotedFieldParser
+        , Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
+            |> Parser.getChompedString
+            |> Parser.inContext Field
+        ]
+
+
+quotedFieldParser : Parser Context Problem String
+quotedFieldParser =
+    Parser.inContext QuotedField <|
+        Parser.succeed identity
+            |. Parser.token quote
+            |= Parser.loop []
+                (\soFar ->
+                    Parser.oneOf
+                        [ Parser.succeed (\() -> Parser.Loop ("\"" :: soFar))
+                            |= Parser.token escapedQuote
+                        , Parser.succeed (\() -> Parser.Done (String.concat (List.reverse soFar)))
+                            |= Parser.token quote
+                        , Parser.succeed (\segment -> Parser.Loop (segment :: soFar))
+                            |= Parser.getChompedString (Parser.chompUntil quote)
+                        ]
+                )
 
 
 quote : Parser.Token Problem
@@ -124,12 +141,6 @@ quote =
     Parser.Token "\"" ExpectingQuote
 
 
-{-| This is the silliest kludge... the syntax highlighting in my editor does
-not deal with a single quote in a char. It starts highlighting everything
-after '"' as a string! Just to make my own environment a little nicer,
-I'm pulling this out. I'll make a patch to the syntax highlighting regexes
-sometime and this can go away.
--}
-literalQuote : Char
-literalQuote =
-    '"'
+escapedQuote : Parser.Token Problem
+escapedQuote =
+    Parser.Token "\"\"" ExpectingEscapedQuote

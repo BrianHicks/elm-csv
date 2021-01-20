@@ -91,6 +91,11 @@ parseTest =
                             ("\"" ++ config.fieldSeparator ++ "\"")
                                 |> parse (unsafeConfig config)
                                 |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
+                    , test "quoted quotes" <|
+                        \_ ->
+                            "\"\"\"\""
+                                |> parse (unsafeConfig config)
+                                |> Expect.equal (Ok [ [ "\"" ] ])
                     ]
             )
         |> describe "parse"
