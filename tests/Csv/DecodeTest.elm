@@ -71,3 +71,25 @@ floatTest =
                             }
                         )
         ]
+
+
+columnTest : Test
+columnTest =
+    describe "column"
+        [ test "can get the only column" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.string (Decode.column 0))
+                    |> Expect.ok
+        , test "can get an arbitrary column" <|
+            \_ ->
+                "a,b,c"
+                    |> Decode.decodeCsvString (Decode.string (Decode.column 1))
+                    |> Expect.equal (Ok [ "b" ])
+        , test "issues an error if the column doesn't exist" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.string (Decode.column 1))
+                    |> Expect.equal
+                        (Err { row = 0, problem = Decode.ExpectedColumn 1 })
+        ]

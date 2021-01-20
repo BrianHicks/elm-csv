@@ -1,5 +1,6 @@
 module Csv.Decode exposing (..)
 
+import Array exposing (Array)
 import Csv.Parser as Parser
 import Parser.Advanced
 
@@ -9,7 +10,7 @@ import Parser.Advanced
 
 
 type Decoder a
-    = Decoder (List (List String) -> Result Error (List a))
+    = Decoder (List (Array String) -> Result Error (List a))
 
 
 string : Location -> Decoder String
@@ -98,7 +99,7 @@ parseRows transform (Location get) =
 
 
 type Location
-    = Location (List String -> Result Problem String)
+    = Location (Array String -> Result Problem String)
 
 
 
@@ -111,12 +112,12 @@ column : Int -> Location
 column col =
     Location <|
         \row ->
-            case row |> List.drop (col - 1) |> List.head of
+            case Array.get col row of
                 Just value ->
                     Ok value
 
                 Nothing ->
-                    Err (Column col)
+                    Err (ExpectedColumn col)
 
 
 
@@ -137,7 +138,7 @@ decodeCsvString : Decoder a -> String -> Result Error (List a)
 decodeCsvString (Decoder decode) source =
     case Parser.parse Parser.crlfCsvConfig source of
         Ok rows ->
-            decode rows
+            decode (List.map Array.fromList rows)
 
         Err _ ->
             -- TODO: really punting on error message quality here but we'll
@@ -165,7 +166,7 @@ type alias Error =
 
 type Problem
     = ParsingProblem
-    | Column Int
+    | ExpectedColumn Int
     | ExpectedInt String
     | ExpectedFloat String
 
