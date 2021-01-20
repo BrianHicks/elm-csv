@@ -36,17 +36,22 @@ parseTest : Test
 parseTest =
     let
         configurations =
-            [ ( "classic CSV"
-              , { rowSeparator = "\n"
-                , fieldSeparator = ","
-                }
-              )
-            , ( "CRLF CSV"
+            [ ( "CRLF CSV"
               , { rowSeparator = "\u{000D}\n"
                 , fieldSeparator = ","
                 }
               )
-            , ( "classic TSV"
+            , ( "LF-only CSV"
+              , { rowSeparator = "\n"
+                , fieldSeparator = ","
+                }
+              )
+            , ( "CRLF TSV"
+              , { rowSeparator = "\u{000D}\n"
+                , fieldSeparator = "\t"
+                }
+              )
+            , ( "LF-only TSV"
               , { rowSeparator = "\n"
                 , fieldSeparator = "\t"
                 }
