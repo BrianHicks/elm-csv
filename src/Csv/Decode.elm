@@ -9,12 +9,28 @@ import Parser.Advanced
 
 
 type Decoder a
-    = DecoderTodo
+    = Decoder (List (List String) -> Result Error (List a))
 
 
 string : Location -> Decoder String
-string loc =
-    DecoderTodo
+string (Location get) =
+    Decoder <|
+        \rows ->
+            rows
+                |> List.foldr
+                    (\next ->
+                        Result.andThen
+                            (\( soFar, rowNum ) ->
+                                case get next of
+                                    Ok val ->
+                                        Ok ( val :: soFar, rowNum - 1 )
+
+                                    Err problem ->
+                                        Err { row = rowNum, problem = problem }
+                            )
+                    )
+                    (Ok ( [], List.length rows ))
+                |> Result.map Tuple.first
 
 
 
@@ -57,17 +73,25 @@ string loc =
 
 
 type Location
-    = LocationTODO
+    = Location (List String -> Result Problem String)
 
 
-field : String -> Location
-field name =
-    LocationTODO
+
+-- field : String -> Location
+-- field name =
+--     LocationTODO
 
 
 column : Int -> Location
 column col =
-    LocationTODO
+    Location <|
+        \row ->
+            case row |> List.drop (col - 1) |> List.head of
+                Just value ->
+                    Ok value
+
+                Nothing ->
+                    Err (MissingColumn col)
 
 
 
@@ -85,13 +109,15 @@ column col =
 
 
 decodeCsvString : Decoder a -> String -> Result Error (List a)
-decodeCsvString decoder source =
-    -- case Parser.parse Parser.crlfCsvConfig source of
-    --     Ok rows ->
-    --         decode rows
-    --     Err err ->
-    --         Err (ParsingError err)
-    Err (ParsingError [])
+decodeCsvString (Decoder decode) source =
+    case Parser.parse Parser.crlfCsvConfig source of
+        Ok rows ->
+            decode (Debug.log "original rows" rows)
+
+        Err _ ->
+            -- TODO: really punting on error message quality here but we'll
+            -- get back to it!
+            Err { row = 0, problem = ParsingProblem }
 
 
 
@@ -106,8 +132,15 @@ decodeCsvString decoder source =
 -}
 
 
-type Error
-    = ParsingError (List (Parser.Advanced.DeadEnd Parser.Context Parser.Problem))
+type alias Error =
+    { problem : Problem
+    , row : Int
+    }
+
+
+type Problem
+    = ParsingProblem
+    | MissingColumn Int
 
 
 errorToString : Error -> String
