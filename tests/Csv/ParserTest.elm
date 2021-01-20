@@ -53,39 +53,37 @@ parseTest =
               )
             ]
     in
-    describe "parse"
-        [ configurations
-            |> List.map
-                (\( description, config ) ->
-                    describe description
-                        [ test "a single value" <|
-                            \_ ->
-                                expectRoundTrip config
-                                    [ [ "a" ] ]
-                        , test "two fields" <|
-                            \_ ->
-                                expectRoundTrip config
-                                    [ [ "a", "b" ] ]
-                        , test "two rows" <|
-                            \_ ->
-                                expectRoundTrip config
-                                    [ [ "a" ]
-                                    , [ "b" ]
-                                    ]
-                        , test "two rows of  two fields" <|
-                            \_ ->
-                                expectRoundTrip config
-                                    [ [ "a", "b" ]
-                                    , [ "c", "d" ]
-                                    ]
-                        , test "blank fields" <|
-                            \_ ->
-                                expectRoundTrip config
-                                    [ [ "", "", "" ] ]
-                        ]
-                )
-            |> describe "with a valid configuration"
-        ]
+    configurations
+        |> List.map
+            (\( description, config ) ->
+                describe description
+                    [ test "a single value" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a" ] ]
+                    , test "two fields" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a", "b" ] ]
+                    , test "two rows" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a" ]
+                                , [ "b" ]
+                                ]
+                    , test "two rows of  two fields" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a", "b" ]
+                                , [ "c", "d" ]
+                                ]
+                    , test "blank fields" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "", "", "" ] ]
+                    ]
+            )
+        |> describe "parse"
 
 
 expectRoundTrip : { rowSeparator : String, fieldSeparator : String } -> List (List String) -> Expectation
