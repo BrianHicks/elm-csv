@@ -81,6 +81,11 @@ parseTest =
                         \_ ->
                             expectRoundTrip config
                                 [ [ "", "", "" ] ]
+                    , test "quoted single values" <|
+                        \_ ->
+                            "\"a\""
+                                |> parse (unsafeConfig config)
+                                |> Expect.equal (Ok [ [ "a" ] ])
                     , test "quoted row separators" <|
                         \_ ->
                             ("\"" ++ config.rowSeparator ++ "\"")
