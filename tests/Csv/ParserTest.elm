@@ -12,4 +12,8 @@ parseTest =
             \_ ->
                 parse "a"
                     |> Expect.equal (Ok [ [ "a" ] ])
+        , test "two values, separated by a comma" <|
+            \_ ->
+                parse "a,b"
+                    |> Expect.equal (Ok [ [ "a", "b" ] ])
         ]

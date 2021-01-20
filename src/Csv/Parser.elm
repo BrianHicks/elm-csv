@@ -23,8 +23,31 @@ type Problem
 
 parser : Parser Context Problem (List (List String))
 parser =
-    Parser.succeed (\field -> [ [ field ] ])
-        |= fieldParser
+    Parser.succeed (\field -> [ field ])
+        |= rowParser
+
+
+rowParser : Parser Context Problem (List String)
+rowParser =
+    Parser.inContext Row <|
+        Parser.loop
+            []
+            (\soFar ->
+                Parser.oneOf
+                    [ -- if the row is done, get out!
+                      Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
+                        |= Parser.end ExpectingEnd
+                    , -- if we see a field separator, it MUST be followed
+                      -- by a field
+                      Parser.succeed (\field -> Parser.Loop (field :: soFar))
+                        |. Parser.token (Parser.Token "," ExpectingFieldSeparator)
+                        |= fieldParser
+                    , -- ... except at the beginning of the row, where there
+                      -- must not be a separator.
+                      Parser.succeed (\field -> Parser.Loop (field :: soFar))
+                        |= fieldParser
+                    ]
+            )
 
 
 fieldParser : Parser Context Problem String
