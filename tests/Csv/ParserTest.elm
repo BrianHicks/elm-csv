@@ -41,12 +41,11 @@ parseTest =
                 , fieldSeparator = ","
                 }
               )
-
-            -- , ( "CRLF CSV"
-            --   , { rowSeparator = "\u{000D}\n"
-            --     , fieldSeparator = ","
-            --     }
-            --   )
+            , ( "CRLF CSV"
+              , { rowSeparator = "\u{000D}\n"
+                , fieldSeparator = ","
+                }
+              )
             , ( "classic TSV"
               , { rowSeparator = "\n"
                 , fieldSeparator = "\t"

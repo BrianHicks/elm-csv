@@ -108,7 +108,6 @@ rowParser config_ =
 fieldParser : InternalConfig -> Parser Context Problem String
 fieldParser config_ =
     Parser.inContext Field <|
-        Parser.oneOf
-            [ Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
-                |> Parser.getChompedString
-            ]
+        (Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
+            |> Parser.getChompedString
+        )
