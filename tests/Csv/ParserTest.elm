@@ -81,26 +81,28 @@ parseTest =
                         \_ ->
                             expectRoundTrip config
                                 [ [ "", "", "" ] ]
-                    , test "quoted single values" <|
-                        \_ ->
-                            "\"a\""
-                                |> parse (unsafeConfig config)
-                                |> Expect.equal (Ok [ [ "a" ] ])
-                    , test "quoted row separators" <|
-                        \_ ->
-                            ("\"" ++ config.rowSeparator ++ "\"")
-                                |> parse (unsafeConfig config)
-                                |> Expect.equal (Ok [ [ config.rowSeparator ] ])
-                    , test "quoted field separators" <|
-                        \_ ->
-                            ("\"" ++ config.fieldSeparator ++ "\"")
-                                |> parse (unsafeConfig config)
-                                |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
-                    , test "quoted quotes" <|
-                        \_ ->
-                            "\"\"\"\""
-                                |> parse (unsafeConfig config)
-                                |> Expect.equal (Ok [ [ "\"" ] ])
+                    , describe "quoted values"
+                        [ test "quoted single values" <|
+                            \_ ->
+                                "\"a\""
+                                    |> parse (unsafeConfig config)
+                                    |> Expect.equal (Ok [ [ "a" ] ])
+                        , test "quoted row separators" <|
+                            \_ ->
+                                ("\"" ++ config.rowSeparator ++ "\"")
+                                    |> parse (unsafeConfig config)
+                                    |> Expect.equal (Ok [ [ config.rowSeparator ] ])
+                        , test "quoted field separators" <|
+                            \_ ->
+                                ("\"" ++ config.fieldSeparator ++ "\"")
+                                    |> parse (unsafeConfig config)
+                                    |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
+                        , test "quoted quotes" <|
+                            \_ ->
+                                "\"\"\"\""
+                                    |> parse (unsafeConfig config)
+                                    |> Expect.equal (Ok [ [ "\"" ] ])
+                        ]
                     ]
             )
         |> describe "parse"
