@@ -112,7 +112,7 @@ fieldParser config_ =
         Parser.oneOf
             [ Parser.succeed identity
                 |. Parser.token quote
-                |= Parser.getChompedString (Parser.chompWhile (\c -> c /= '"'))
+                |= Parser.getChompedString (Parser.chompWhile (\c -> c /= literalQuote))
                 |. Parser.token quote
             , Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
                 |> Parser.getChompedString
@@ -122,3 +122,14 @@ fieldParser config_ =
 quote : Parser.Token Problem
 quote =
     Parser.Token "\"" ExpectingQuote
+
+
+{-| This is the silliest kludge... the syntax highlighting in my editor does
+not deal with a single quote in a char. It starts highlighting everything
+after '"' as a string! Just to make my own environment a little nicer,
+I'm pulling this out. I'll make a patch to the syntax highlighting regexes
+sometime and this can go away.
+-}
+literalQuote : Char
+literalQuote =
+    '"'
