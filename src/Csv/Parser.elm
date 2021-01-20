@@ -17,8 +17,6 @@ type Problem
     = ExpectingRowSeparator
     | ExpectingFieldSeparator
     | ExpectingEnd
-      --
-    | Unimplemented
 
 
 parser : Parser Context Problem (List (List String))
