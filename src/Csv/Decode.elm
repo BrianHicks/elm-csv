@@ -112,7 +112,7 @@ decodeCsvString : Decoder a -> String -> Result Error (List a)
 decodeCsvString (Decoder decode) source =
     case Parser.parse Parser.crlfCsvConfig source of
         Ok rows ->
-            decode (Debug.log "original rows" rows)
+            decode rows
 
         Err _ ->
             -- TODO: really punting on error message quality here but we'll
