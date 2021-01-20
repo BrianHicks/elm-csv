@@ -141,3 +141,29 @@ succeedTest =
                     |> Decode.decodeCsvString (Decode.succeed ())
                     |> Expect.equal (Ok [ (), () ])
         ]
+
+
+failTest : Test
+failTest =
+    describe "fail"
+        [ test "ignores the values you send it in favor of the value you provide" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.fail "a nice description")
+                    |> Expect.equal
+                        (Err
+                            { problem = Decode.Failure "a nice description"
+                            , row = 0
+                            }
+                        )
+        , test "fails on the first row where it's attempted" <|
+            \_ ->
+                "a\u{000D}\nb"
+                    |> Decode.decodeCsvString (Decode.fail "a nice description")
+                    |> Expect.equal
+                        (Err
+                            { problem = Decode.Failure "a nice description"
+                            , row = 0
+                            }
+                        )
+        ]

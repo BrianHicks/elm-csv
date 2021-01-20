@@ -126,7 +126,7 @@ decodeCsvString (Decoder decode) source =
     case Parser.parse Parser.crlfCsvConfig source of
         Ok rows ->
             rows
-                |> List.foldr
+                |> List.foldl
                     (\next ->
                         Result.andThen
                             (\( soFar, rowNum ) ->
@@ -138,8 +138,8 @@ decodeCsvString (Decoder decode) source =
                                         Err { row = rowNum, problem = problem }
                             )
                     )
-                    (Ok ( [], List.length rows - 1 ))
-                |> Result.map Tuple.first
+                    (Ok ( [], 0 ))
+                |> Result.map (Tuple.first >> List.reverse)
 
         Err _ ->
             -- TODO: really punting on error message quality here but we'll
@@ -170,6 +170,7 @@ type Problem
     | ExpectedColumn Int
     | ExpectedInt String
     | ExpectedFloat String
+    | Failure String
 
 
 errorToString : Error -> String
@@ -236,3 +237,8 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
 succeed : a -> Decoder a
 succeed value =
     Decoder (\_ -> Ok value)
+
+
+fail : String -> Decoder a
+fail message =
+    Decoder (\_ -> Err (Failure message))
