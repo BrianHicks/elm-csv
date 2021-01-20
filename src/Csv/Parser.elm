@@ -1,11 +1,11 @@
 module Csv.Parser exposing
-    ( Config, config, ConfigProblem(..)
+    ( Config, crlfCsvConfig, customConfig, ConfigProblem(..)
     , parse, Problem(..), Context(..)
     )
 
 {-|
 
-@docs Config, config, ConfigProblem
+@docs Config, crlfCsvConfig, customConfig, ConfigProblem
 
 @docs parse, Problem, Context
 
@@ -31,12 +31,32 @@ type ConfigProblem
     | NeedNonBlankFieldSeparator
 
 
-config :
+crlfCsvConfig : Config
+crlfCsvConfig =
+    Config
+        { rowSeparator = Parser.Token "\u{000D}\n" (ExpectingRowSeparator "\u{000D}\n")
+        , newRowIndicator = '\u{000D}'
+        , fieldSeparator = Parser.Token "," (ExpectingFieldSeparator ",")
+        , newFieldIndicator = ','
+        }
+
+
+crlfTsvConfig : Config
+crlfTsvConfig =
+    Config
+        { rowSeparator = Parser.Token "\u{000D}\n" (ExpectingRowSeparator "\u{000D}\n")
+        , newRowIndicator = '\u{000D}'
+        , fieldSeparator = Parser.Token "\t" (ExpectingFieldSeparator "\t")
+        , newFieldIndicator = '\t'
+        }
+
+
+customConfig :
     { rowSeparator : String
     , fieldSeparator : String
     }
     -> Result ConfigProblem Config
-config separators =
+customConfig separators =
     case ( String.uncons separators.rowSeparator, String.uncons separators.fieldSeparator ) of
         ( Just ( newRowIndicator, _ ), Just ( newFieldIndicator, _ ) ) ->
             (Ok << Config)
