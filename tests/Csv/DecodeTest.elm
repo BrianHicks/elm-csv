@@ -97,10 +97,31 @@ columnTest =
 
 mapTest : Test
 mapTest =
-    describe "map"
-        [ test "can map a value" <|
+    describe "map functions"
+        [ test "can map a single value" <|
             \_ ->
                 "5"
                     |> Decode.decodeCsvString (Decode.int (Decode.column 0) |> Decode.map (\i -> i * 2))
                     |> Expect.equal (Ok [ 10 ])
+        , test "map2" <|
+            \_ ->
+                "1,Atlas"
+                    |> Decode.decodeCsvString
+                        (Decode.map2 Tuple.pair
+                            (Decode.int (Decode.column 0))
+                            (Decode.string (Decode.column 1))
+                        )
+                    |> Expect.equal
+                        (Ok [ ( 1, "Atlas" ) ])
+        , test "map3" <|
+            \_ ->
+                "1,Atlas,Cat"
+                    |> Decode.decodeCsvString
+                        (Decode.map3 (\id name species -> ( id, name, species ))
+                            (Decode.int (Decode.column 0))
+                            (Decode.string (Decode.column 1))
+                            (Decode.string (Decode.column 2))
+                        )
+                    |> Expect.equal
+                        (Ok [ ( 1, "Atlas", "Cat" ) ])
         ]

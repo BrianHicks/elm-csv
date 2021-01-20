@@ -10,57 +10,44 @@ import Parser.Advanced
 
 
 type Decoder a
-    = Decoder (List (Array String) -> Result Error (List a))
+    = Decoder (Array String -> Result Problem a)
 
 
 string : Location -> Decoder String
-string =
-    parseRows Ok
+string (Location get) =
+    Decoder get
 
 
 int : Location -> Decoder Int
-int =
-    parseRows <|
-        \value ->
-            case String.toInt value of
-                Just parsed ->
-                    Ok parsed
+int (Location get) =
+    Decoder
+        (get
+            >> Result.andThen
+                (\value ->
+                    case String.toInt value of
+                        Just parsed ->
+                            Ok parsed
 
-                Nothing ->
-                    Err (ExpectedInt value)
+                        Nothing ->
+                            Err (ExpectedInt value)
+                )
+        )
 
 
 float : Location -> Decoder Float
-float =
-    parseRows <|
-        \value ->
-            case String.toFloat value of
-                Just parsed ->
-                    Ok parsed
+float (Location get) =
+    Decoder
+        (get
+            >> Result.andThen
+                (\value ->
+                    case String.toFloat value of
+                        Just parsed ->
+                            Ok parsed
 
-                Nothing ->
-                    Err (ExpectedFloat value)
-
-
-parseRows : (String -> Result Problem a) -> Location -> Decoder a
-parseRows transform (Location get) =
-    Decoder <|
-        \rows ->
-            rows
-                |> List.foldr
-                    (\next ->
-                        Result.andThen
-                            (\( soFar, rowNum ) ->
-                                case Result.andThen transform (get next) of
-                                    Ok val ->
-                                        Ok ( val :: soFar, rowNum - 1 )
-
-                                    Err problem ->
-                                        Err { row = rowNum, problem = problem }
-                            )
-                    )
-                    (Ok ( [], List.length rows - 1 ))
-                |> Result.map Tuple.first
+                        Nothing ->
+                            Err (ExpectedFloat value)
+                )
+        )
 
 
 
@@ -138,7 +125,21 @@ decodeCsvString : Decoder a -> String -> Result Error (List a)
 decodeCsvString (Decoder decode) source =
     case Parser.parse Parser.crlfCsvConfig source of
         Ok rows ->
-            decode (List.map Array.fromList rows)
+            rows
+                |> List.foldr
+                    (\next ->
+                        Result.andThen
+                            (\( soFar, rowNum ) ->
+                                case decode (Array.fromList next) of
+                                    Ok val ->
+                                        Ok ( val :: soFar, rowNum - 1 )
+
+                                    Err problem ->
+                                        Err { row = rowNum, problem = problem }
+                            )
+                    )
+                    (Ok ( [], List.length rows - 1 ))
+                |> Result.map Tuple.first
 
         Err _ ->
             -- TODO: really punting on error message quality here but we'll
@@ -205,4 +206,25 @@ errorToString _ =
 
 map : (from -> to) -> Decoder from -> Decoder to
 map transform (Decoder decoder) =
-    Decoder (decoder >> Result.map (List.map transform))
+    Decoder (decoder >> Result.map transform)
+
+
+map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
+map2 transform (Decoder decodeA) (Decoder decodeB) =
+    Decoder
+        (\row ->
+            Result.map2 transform
+                (decodeA row)
+                (decodeB row)
+        )
+
+
+map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
+map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
+    Decoder
+        (\row ->
+            Result.map3 transform
+                (decodeA row)
+                (decodeB row)
+                (decodeC row)
+        )
