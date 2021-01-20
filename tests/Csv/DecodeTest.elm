@@ -24,3 +24,24 @@ stringTest =
                     |> Decode.decodeCsvString (Decode.string (Decode.column 0))
                     |> Expect.equal (Ok [ "1" ])
         ]
+
+
+intTest : Test
+intTest =
+    describe "int"
+        [ test "a valid integer" <|
+            \_ ->
+                "1"
+                    |> Decode.decodeCsvString (Decode.int (Decode.column 0))
+                    |> Expect.equal (Ok [ 1 ])
+        , test "an invalid integer" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.int (Decode.column 0))
+                    |> Expect.equal
+                        (Err
+                            { row = 0
+                            , problem = Decode.ExpectedInt "a"
+                            }
+                        )
+        ]

@@ -13,7 +13,24 @@ type Decoder a
 
 
 string : Location -> Decoder String
-string (Location get) =
+string =
+    parseRows Ok
+
+
+int : Location -> Decoder Int
+int =
+    parseRows <|
+        \value ->
+            case String.toInt value of
+                Just parsed ->
+                    Ok parsed
+
+                Nothing ->
+                    Err (ExpectedInt value)
+
+
+parseRows : (String -> Result Problem a) -> Location -> Decoder a
+parseRows transform (Location get) =
     Decoder <|
         \rows ->
             rows
@@ -21,7 +38,7 @@ string (Location get) =
                     (\next ->
                         Result.andThen
                             (\( soFar, rowNum ) ->
-                                case get next of
+                                case Result.andThen transform (get next) of
                                     Ok val ->
                                         Ok ( val :: soFar, rowNum - 1 )
 
@@ -29,7 +46,7 @@ string (Location get) =
                                         Err { row = rowNum, problem = problem }
                             )
                     )
-                    (Ok ( [], List.length rows ))
+                    (Ok ( [], List.length rows - 1 ))
                 |> Result.map Tuple.first
 
 
@@ -39,7 +56,6 @@ string (Location get) =
    bool : Location -> Decoder Bool
 
 
-   int : Location -> Decoder Int
 
 
    float : Location -> Decoder Float
@@ -91,7 +107,7 @@ column col =
                     Ok value
 
                 Nothing ->
-                    Err (MissingColumn col)
+                    Err (Column col)
 
 
 
@@ -140,7 +156,8 @@ type alias Error =
 
 type Problem
     = ParsingProblem
-    | MissingColumn Int
+    | Column Int
+    | ExpectedInt String
 
 
 errorToString : Error -> String
