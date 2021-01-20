@@ -1,6 +1,7 @@
 module Csv.Decode exposing (..)
 
 import Csv.Parser as Parser
+import Parser.Advanced
 
 
 
@@ -8,24 +9,24 @@ import Csv.Parser as Parser
 
 
 type Decoder a
-    = TODODecoder
+    = DecoderTodo
 
 
-string : Decoder String
-string =
-    TODODecoder
+string : Location -> Decoder String
+string loc =
+    DecoderTodo
 
 
 
 {-
 
-   bool : Decoder Bool
+   bool : Location -> Decoder Bool
 
 
-   int : Decoder Int
+   int : Location -> Decoder Int
 
 
-   float : Decoder Float
+   float : Location -> Decoder Float
 
 
 
@@ -33,7 +34,11 @@ string =
       -- DATA STRUCTURES
 
 
+      -- nullable doesn't make sense as a name since CSV does not have a
+      -- null data type. When this gets uncommented, what about `optional`?
       nullable : Decoder a -> Decoder (Maybe a)
+
+      -- maybe also add `blankable?`
 
 
 
@@ -46,23 +51,34 @@ string =
       ----------
       -- OBJECT PRIMITIVES
 
-
       field : String -> Decoder a -> Decoder a
+      -- index
+-}
 
 
-      index : Int -> Decoder a -> Decoder a
+type Location
+    = LocationTODO
+
+
+field : String -> Location
+field name =
+    LocationTODO
+
+
+column : Int -> Location
+column col =
+    LocationTODO
 
 
 
-      -- at
-      ----------
-      -- INCONSISTENT STRUCTURE
+{-
+
+   ----------
+   -- INCONSISTENT STRUCTURE
+   -- maybe
 
 
-      maybe : Decoder a -> Decoder (Maybe a)
-
-
-      oneOf : List (Decoder a) -> Decoder a
+   oneOf : List (Decoder a) -> Decoder a
 
 -}
 -- RUN DECODERS
@@ -70,7 +86,12 @@ string =
 
 decodeCsvString : Decoder a -> String -> Result Error (List a)
 decodeCsvString decoder source =
-    Err TODOError
+    -- case Parser.parse Parser.crlfCsvConfig source of
+    --     Ok rows ->
+    --         decode rows
+    --     Err err ->
+    --         Err (ParsingError err)
+    Err (ParsingError [])
 
 
 
@@ -86,7 +107,7 @@ decodeCsvString decoder source =
 
 
 type Error
-    = TODOError
+    = ParsingError (List (Parser.Advanced.DeadEnd Parser.Context Parser.Problem))
 
 
 errorToString : Error -> String
@@ -111,7 +132,7 @@ errorToString _ =
    lazy : (() -> Decoder a) -> Decoder a
 
 
-   value : Decoder Value
+   -- value
 
 
    null : a -> Decoder a
