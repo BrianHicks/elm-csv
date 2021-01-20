@@ -29,6 +29,18 @@ int =
                     Err (ExpectedInt value)
 
 
+float : Location -> Decoder Float
+float =
+    parseRows <|
+        \value ->
+            case String.toFloat value of
+                Just parsed ->
+                    Ok parsed
+
+                Nothing ->
+                    Err (ExpectedFloat value)
+
+
 parseRows : (String -> Result Problem a) -> Location -> Decoder a
 parseRows transform (Location get) =
     Decoder <|
@@ -56,9 +68,6 @@ parseRows transform (Location get) =
    bool : Location -> Decoder Bool
 
 
-
-
-   float : Location -> Decoder Float
 
 
 
@@ -158,6 +167,7 @@ type Problem
     = ParsingProblem
     | Column Int
     | ExpectedInt String
+    | ExpectedFloat String
 
 
 errorToString : Error -> String

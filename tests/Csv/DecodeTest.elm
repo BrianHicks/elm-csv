@@ -45,3 +45,29 @@ intTest =
                             }
                         )
         ]
+
+
+floatTest : Test
+floatTest =
+    describe "float"
+        [ test "a float shaped like an integer" <|
+            \_ ->
+                "1"
+                    |> Decode.decodeCsvString (Decode.float (Decode.column 0))
+                    |> Expect.equal (Ok [ 1.0 ])
+        , test "a float shaped like a floating-point number" <|
+            \_ ->
+                "3.14"
+                    |> Decode.decodeCsvString (Decode.float (Decode.column 0))
+                    |> Expect.equal (Ok [ 3.14 ])
+        , test "an invalid float" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.float (Decode.column 0))
+                    |> Expect.equal
+                        (Err
+                            { row = 0
+                            , problem = Decode.ExpectedFloat "a"
+                            }
+                        )
+        ]
