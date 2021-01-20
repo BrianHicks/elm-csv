@@ -178,30 +178,7 @@ errorToString _ =
 
 
 
-{-
-
-   -- MAPPING
-   -- map2, map3, map4, map5, map6, map7, map8
-   -- FANCY DECODING
-
-
-   lazy : (() -> Decoder a) -> Decoder a
-
-
-   -- value
-
-
-   null : a -> Decoder a
-
-
-   succeed : a -> Decoder a
-
-
-   fail : String -> Decoder a
-
-
-   andThen : (from -> Decoder to) -> Decoder from -> Decoder to
--}
+-- MAPPING
 
 
 map : (from -> to) -> Decoder from -> Decoder to
@@ -228,3 +205,29 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
                 (decodeB row)
                 (decodeC row)
         )
+
+
+
+-- map4, map5, map6, map7, map8
+{-
+
+
+
+   lazy : (() -> Decoder a) -> Decoder a
+
+
+   -- value
+
+
+   null : a -> Decoder a
+
+
+   succeed : a -> Decoder a
+
+
+   fail : String -> Decoder a
+
+
+   andThen : (from -> Decoder to) -> Decoder from -> Decoder to
+-}
+-- FANCY DECODING
