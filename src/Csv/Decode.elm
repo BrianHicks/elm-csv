@@ -1,5 +1,9 @@
 module Csv.Decode exposing (..)
 
+import Csv.Parser as Parser
+
+
+
 -- PRIMITIVES
 
 
@@ -7,11 +11,13 @@ type Decoder a
     = TODODecoder
 
 
+string : Decoder String
+string =
+    TODODecoder
+
+
 
 {-
-
-   string : Decoder String
-
 
    bool : Decoder Bool
 
@@ -58,54 +64,64 @@ type Decoder a
 
       oneOf : List (Decoder a) -> Decoder a
 
+-}
+-- RUN DECODERS
 
 
-      -- RUN DECODERS
-
-
-      decodeString : Decoder a -> String -> Result Error a
-
-
-      decodeValue : Decoder a -> Value -> Result Error a
-
-
-      type Value
-          = TODODefinedElsewhere
-
-
-      type Error
-          = TODOError
-
-
-      errorToString : Error -> String
+decodeCsvString : Decoder a -> String -> Result Error (List a)
+decodeCsvString decoder source =
+    Err TODOError
 
 
 
-      -- MAPPING
+{-
+   decodeValue : Decoder a -> Value -> Result Error a
 
 
-      map : (from -> to) -> Decoder from -> Decoder to
+   type Value
+       = TODODefinedElsewhere
+
+
+-}
+
+
+type Error
+    = TODOError
+
+
+errorToString : Error -> String
+errorToString _ =
+    "TODO"
 
 
 
-      -- map2, map3, map4, map5, map6, map7, map8
-      -- FANCY DECODING
+{-
+
+   -- MAPPING
 
 
-      lazy : (() -> Decoder a) -> Decoder a
+   map : (from -> to) -> Decoder from -> Decoder to
 
 
-      value : Decoder Value
+
+   -- map2, map3, map4, map5, map6, map7, map8
+   -- FANCY DECODING
 
 
-      null : a -> Decoder a
+   lazy : (() -> Decoder a) -> Decoder a
 
 
-      succeed : a -> Decoder a
+   value : Decoder Value
 
 
-      fail : String -> Decoder a
+   null : a -> Decoder a
 
 
-      andThen : (from -> Decoder to) -> Decoder from -> Decoder to
+   succeed : a -> Decoder a
+
+
+   fail : String -> Decoder a
+
+
+   andThen : (from -> Decoder to) -> Decoder from -> Decoder to
 -}
