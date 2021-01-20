@@ -231,3 +231,8 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
    andThen : (from -> Decoder to) -> Decoder from -> Decoder to
 -}
 -- FANCY DECODING
+
+
+succeed : a -> Decoder a
+succeed value =
+    Decoder (\_ -> Ok value)

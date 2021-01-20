@@ -125,3 +125,19 @@ mapTest =
                     |> Expect.equal
                         (Ok [ ( 1, "Atlas", "Cat" ) ])
         ]
+
+
+succeedTest : Test
+succeedTest =
+    describe "succeed"
+        [ test "ignores the values you send it in favor of the value you provide" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsvString (Decode.succeed ())
+                    |> Expect.equal (Ok [ () ])
+        , test "provides one value for each row" <|
+            \_ ->
+                "a\u{000D}\nb"
+                    |> Decode.decodeCsvString (Decode.succeed ())
+                    |> Expect.equal (Ok [ (), () ])
+        ]
