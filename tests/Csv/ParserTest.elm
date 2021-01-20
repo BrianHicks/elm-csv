@@ -20,4 +20,13 @@ parseTest =
             \_ ->
                 parse "a\nb"
                     |> Expect.equal (Ok [ [ "a" ], [ "b" ] ])
+        , test "two rows, two values" <|
+            \_ ->
+                parse "a,b\nc,d"
+                    |> Expect.equal
+                        (Ok
+                            [ [ "a", "b" ]
+                            , [ "c", "d" ]
+                            ]
+                        )
         ]
