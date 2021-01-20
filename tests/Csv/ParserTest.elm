@@ -81,6 +81,16 @@ parseTest =
                         \_ ->
                             expectRoundTrip config
                                 [ [ "", "", "" ] ]
+                    , test "quoted row separators" <|
+                        \_ ->
+                            ("\"" ++ config.rowSeparator ++ "\"")
+                                |> parse (unsafeConfig config)
+                                |> Expect.equal (Ok [ [ config.rowSeparator ] ])
+                    , test "quoted field separators" <|
+                        \_ ->
+                            ("\"" ++ config.fieldSeparator ++ "\"")
+                                |> parse (unsafeConfig config)
+                                |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
                     ]
             )
         |> describe "parse"
@@ -98,3 +108,13 @@ expectRoundTrip separators rows =
 
         otherwise ->
             Expect.ok otherwise
+
+
+unsafeConfig : { rowSeparator : String, fieldSeparator : String } -> Parser.Config
+unsafeConfig separators =
+    case Parser.config separators of
+        Ok config ->
+            config
+
+        Err problem ->
+            Debug.todo (Debug.toString problem)

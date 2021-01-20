@@ -66,6 +66,7 @@ type Context
 type Problem
     = ExpectingRowSeparator String
     | ExpectingFieldSeparator String
+    | ExpectingQuote
     | ExpectingEnd
 
 
@@ -108,6 +109,16 @@ rowParser config_ =
 fieldParser : InternalConfig -> Parser Context Problem String
 fieldParser config_ =
     Parser.inContext Field <|
-        (Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
-            |> Parser.getChompedString
-        )
+        Parser.oneOf
+            [ Parser.succeed identity
+                |. Parser.token quote
+                |= Parser.getChompedString (Parser.chompWhile (\c -> c /= '"'))
+                |. Parser.token quote
+            , Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
+                |> Parser.getChompedString
+            ]
+
+
+quote : Parser.Token Problem
+quote =
+    Parser.Token "\"" ExpectingQuote
