@@ -14,5 +14,6 @@ stdenv.mkDerivation {
     elmPackages.elm
     elmPackages.elm-format
     elmPackages.elm-test
+    elmPackages.elm-verify-examples
   ];
 }
