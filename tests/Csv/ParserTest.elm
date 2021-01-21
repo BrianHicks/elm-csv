@@ -2,6 +2,7 @@ module Csv.ParserTest exposing (..)
 
 import Csv.Parser as Parser exposing (parse)
 import Expect exposing (Expectation)
+import Parser as ElmParser
 import Test exposing (..)
 
 
@@ -149,6 +150,19 @@ parseTest =
                                 "\"\"\"\""
                                     |> parse (unsafeCustomConfig config)
                                     |> Expect.equal (Ok [ [ "\"" ] ])
+                        , describe "errors"
+                            [ test "not ending a quoted value is an error" <|
+                                \_ ->
+                                    "\"a"
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal
+                                            (Err
+                                                [ { row = 1, col = 2, problem = ElmParser.Expecting "\"\"" }
+                                                , { row = 1, col = 2, problem = ElmParser.Expecting "\"" }
+                                                , { row = 1, col = 3, problem = ElmParser.Expecting "\"" }
+                                                ]
+                                            )
+                            ]
                         ]
                     ]
             )
