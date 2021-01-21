@@ -114,6 +114,13 @@ fieldTest =
                     |> Decode.decodeCsv (CustomHeaders []) (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+        , test "retrieves the field from custom-provided fields" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv
+                        (CustomHeaders [ "Name" ])
+                        (Decode.field "Name" Decode.string)
+                    |> Expect.equal (Ok [ "a" ])
         , test "does not work when the first row doesn't contain the name" <|
             \_ ->
                 "Blah\u{000D}\na"

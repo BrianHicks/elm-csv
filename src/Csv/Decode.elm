@@ -35,7 +35,7 @@ All of those functions have examples in their documentation. Check 'em out!
 -}
 
 import Csv.Parser as Parser
-import Dict
+import Dict exposing (Dict)
 import Parser as ElmParser
 import Parser.Advanced
 
@@ -48,7 +48,7 @@ import Parser.Advanced
 if you have a `Pet` data type, you'd want a `Decoder Pet`.
 -}
 type Decoder a
-    = Decoder (List String -> Result Problem a)
+    = Decoder (( Dict String Int, List String ) -> Result Problem a)
 
 
 {-| Decode a string from a CSV.
@@ -64,7 +64,7 @@ only one column in the CSV and try to decode that.
 -}
 string : Decoder String
 string =
-    Decoder (getOnly Ok)
+    Decoder (Tuple.second >> getOnly Ok)
 
 
 {-| Decode an integer from a CSV.
@@ -86,15 +86,16 @@ only one column in the CSV and try to decode that.
 int : Decoder Int
 int =
     Decoder
-        (getOnly
-            (\value ->
-                case String.toInt value of
-                    Just parsed ->
-                        Ok parsed
+        (Tuple.second
+            >> getOnly
+                (\value ->
+                    case String.toInt value of
+                        Just parsed ->
+                            Ok parsed
 
-                    Nothing ->
-                        Err (ExpectedInt value)
-            )
+                        Nothing ->
+                            Err (ExpectedInt value)
+                )
         )
 
 
@@ -117,15 +118,16 @@ only one column in the CSV and try to decode that.
 float : Decoder Float
 float =
     Decoder
-        (getOnly
-            (\value ->
-                case String.toFloat value of
-                    Just parsed ->
-                        Ok parsed
+        (Tuple.second
+            >> getOnly
+                (\value ->
+                    case String.toFloat value of
+                        Just parsed ->
+                            Ok parsed
 
-                    Nothing ->
-                        Err (ExpectedFloat value)
-            )
+                        Nothing ->
+                            Err (ExpectedFloat value)
+                )
         )
 
 
@@ -160,10 +162,10 @@ getOnly transform row =
 column : Int -> Decoder a -> Decoder a
 column col (Decoder decoder) =
     Decoder <|
-        \row ->
+        \( names, row ) ->
             case row |> List.drop col |> List.head of
                 Just value ->
-                    decoder [ value ]
+                    decoder ( names, [ value ] )
 
                 Nothing ->
                     Err (ExpectedColumn col)
@@ -171,15 +173,12 @@ column col (Decoder decoder) =
 
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
-    let
-        headers =
-            Dict.empty
-    in
     Decoder <|
-        \row ->
-            case Dict.get name headers |> Maybe.andThen (\col -> row |> List.drop col |> List.head) of
+        \( names, row ) ->
+            -- TODO: AHHHHHHHHHHHHH an array would be way better
+            case Dict.get name names |> Maybe.andThen (\col -> row |> List.drop col |> List.head) of
                 Just value ->
-                    decoder [ value ]
+                    decoder ( names, [ value ] )
 
                 Nothing ->
                     Err (ExpectedField name)
@@ -192,6 +191,24 @@ field name (Decoder decoder) =
 type Headers
     = NoHeaders
     | CustomHeaders (List String)
+
+
+headersToNames : Headers -> Dict String Int
+headersToNames headers =
+    case headers of
+        NoHeaders ->
+            Dict.empty
+
+        CustomHeaders names ->
+            names
+                |> List.foldl
+                    (\name ( soFar, i ) ->
+                        ( Dict.insert name i soFar
+                        , i + 1
+                        )
+                    )
+                    ( Dict.empty, 0 )
+                |> Tuple.first
 
 
 {-| Convert a CSV string into some type you care about using the `Decoder`s
@@ -230,12 +247,16 @@ decodeCustom separators headers (Decoder decode) source =
         Ok config ->
             case Parser.parse config source of
                 Ok rows ->
+                    let
+                        names =
+                            headersToNames headers
+                    in
                     rows
                         |> List.foldl
                             (\row ->
                                 Result.andThen
                                     (\( soFar, rowNum ) ->
-                                        case decode row of
+                                        case decode ( names, row ) of
                                             Ok val ->
                                                 Ok ( val :: soFar, rowNum - 1 )
 
