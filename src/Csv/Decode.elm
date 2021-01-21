@@ -153,7 +153,7 @@ getOnly transform row =
 
     decodeCsv NoFieldNames (column 0 string) "Argentina" --> Ok [ "Argentina" ]
 
-    decodeCsv NoFieldNames (column 1 int) "1,2,3"--> Ok [ 2 ]
+    decodeCsv NoFieldNames (column 1 int) "1,2,3" --> Ok [ 2 ]
 
     decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err (DecodingError { row = 0, problem = ExpectedColumn 100 })
@@ -171,6 +171,27 @@ column col (Decoder decoder) =
                     Err (ExpectedColumn col)
 
 
+{-| Parse a value at a named column in the CSV.
+
+    decodeCsv
+        FromFirstRow
+        (field "Country" string)
+        "Country\r\nArgentina"
+    --> Ok [ "Argentina" ]
+
+    decodeCsv
+        (CustomFieldNames [ "a", "b", "c" ])
+        (field "b" int)
+        "1,2,3"
+    --> Ok [ 2 ]
+
+    decodeCsv
+        (CustomFieldNames [ "Constant" ])
+        (field "Nonexistent" float)
+        "3.14"
+    --> Err (DecodingError { row = 0, problem = ExpectedField "Nonexistent" })
+
+-}
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
     Decoder <|
@@ -188,6 +209,14 @@ field name (Decoder decoder) =
 -- RUN DECODERS
 
 
+{-| Where do we get names for use with [`field`](#field)?
+
+  - `NoFieldNames`: don't get field names at all. [`field`](#field) will always fail.
+  - `CustomFieldNames`: use the provided field names in order (so
+    `["Id", "Name"]` will mean that "Id" is in column 0 and "Name" is in column 1.)
+  - `FromFirstRow`: use the first row of the CSV as the source of field names.
+
+-}
 type FieldNames
     = NoFieldNames
     | CustomFieldNames (List String)
