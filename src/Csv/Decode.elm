@@ -1,6 +1,6 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
-    , column
+    , column, field
     , Headers(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
     , succeed, fail, andThen
@@ -24,7 +24,7 @@ All of those functions have examples in their documentation. Check 'em out!
 
 @docs Decoder, string, int, float
 
-@docs column
+@docs column, field
 
 @docs Headers, decodeCsv, decodeCustom, Error, errorToString, Problem
 
@@ -35,6 +35,7 @@ All of those functions have examples in their documentation. Check 'em out!
 -}
 
 import Csv.Parser as Parser
+import Dict
 import Parser as ElmParser
 import Parser.Advanced
 
@@ -168,6 +169,22 @@ column col (Decoder decoder) =
                     Err (ExpectedColumn col)
 
 
+field : String -> Decoder a -> Decoder a
+field name (Decoder decoder) =
+    let
+        headers =
+            Dict.empty
+    in
+    Decoder <|
+        \row ->
+            case Dict.get name headers |> Maybe.andThen (\col -> row |> List.drop col |> List.head) of
+                Just value ->
+                    decoder [ value ]
+
+                Nothing ->
+                    Err (ExpectedField name)
+
+
 
 -- RUN DECODERS
 
@@ -247,6 +264,7 @@ type Error
 -}
 type Problem
     = ExpectedColumn Int
+    | ExpectedField String
     | AmbiguousColumn
     | ExpectedInt String
     | ExpectedFloat String
@@ -331,6 +349,9 @@ errorToString error =
                     case err.problem of
                         ExpectedColumn i ->
                             "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
+
+                        ExpectedField name ->
+                            "I looked for a column named `" ++ name ++ "`, but couldn't find one."
 
                         AmbiguousColumn ->
                             "I needed there to be exactly one column."

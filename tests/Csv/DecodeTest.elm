@@ -99,6 +99,30 @@ columnTest =
         ]
 
 
+fieldTest : Test
+fieldTest =
+    describe "field"
+        [ test "does not work when no field names are provided or present" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv NoHeaders (Decode.field "Name" Decode.string)
+                    |> Expect.equal
+                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+        , test "does not work when the provided headers don't contain the name" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv (CustomHeaders []) (Decode.field "Name" Decode.string)
+                    |> Expect.equal
+                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+        , test "does not work when the first row doesn't contain the name" <|
+            \_ ->
+                "Blah\u{000D}\na"
+                    |> Decode.decodeCsv (CustomHeaders []) (Decode.field "Name" Decode.string)
+                    |> Expect.equal
+                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+        ]
+
+
 mapTest : Test
 mapTest =
     describe "map functions"
