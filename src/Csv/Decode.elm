@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
     , column
-    , decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
+    , Headers(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
     , succeed, fail, andThen
     )
@@ -26,7 +26,7 @@ All of those functions have examples in their documentation. Check 'em out!
 
 @docs column
 
-@docs decodeCsv, decodeCustom, Error, errorToString, Problem
+@docs Headers, decodeCsv, decodeCustom, Error, errorToString, Problem
 
 @docs map, map2, map3, pipeline, required
 
@@ -52,12 +52,13 @@ type Decoder a
 
 {-| Decode a string from a CSV.
 
-    decodeCsv string "a" --> Ok [ "a" ]
+    decodeCsv NoHeaders string "a" --> Ok [ "a" ]
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv string "a,b" --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
+    decodeCsv NoHeaders string "a,b"
+    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
 string : Decoder String
@@ -67,17 +68,17 @@ string =
 
 {-| Decode an integer from a CSV.
 
-    decodeCsv int "1" --> Ok [ 1 ]
+    decodeCsv NoHeaders int "1" --> Ok [ 1 ]
 
-    decodeCsv int "-1" --> Ok [ -1 ]
+    decodeCsv NoHeaders int "-1" --> Ok [ -1 ]
 
-    decodeCsv int "volcano"
+    decodeCsv NoHeaders int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv int "1,2"
+    decodeCsv NoHeaders int "1,2"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
@@ -98,17 +99,17 @@ int =
 
 {-| Decode an integer from a CSV.
 
-    decodeCsv float "3" --> Ok [ 3.0 ]
+    decodeCsv NoHeaders float "3" --> Ok [ 3.0 ]
 
-    decodeCsv float "3.14" --> Ok [ 3.14 ]
+    decodeCsv NoHeaders float "3.14" --> Ok [ 3.14 ]
 
-    decodeCsv float "mimesis"
+    decodeCsv NoHeaders float "mimesis"
     --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv float "1.0,2.0"
+    decodeCsv NoHeaders float "1.0,2.0"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
@@ -147,11 +148,11 @@ getOnly transform row =
 
 {-| Parse a value at a given column in the CSV.
 
-    decodeCsv (column 0 string) "Argentina" --> Ok [ "Argentina" ]
+    decodeCsv NoHeaders (column 0 string) "Argentina" --> Ok [ "Argentina" ]
 
-    decodeCsv (column 1 int) "1,2,3"--> Ok [ 2 ]
+    decodeCsv NoHeaders (column 1 int) "1,2,3"--> Ok [ 2 ]
 
-    decodeCsv (column 100 float) "3.14"
+    decodeCsv NoHeaders (column 100 float) "3.14"
     --> Err (DecodingError { row = 0, problem = ExpectedColumn 100 })
 
 -}
@@ -171,10 +172,15 @@ column col (Decoder decoder) =
 -- RUN DECODERS
 
 
+type Headers
+    = NoHeaders
+    | CustomHeaders (List String)
+
+
 {-| Convert a CSV string into some type you care about using the `Decoder`s
 in this module!
 -}
-decodeCsv : Decoder a -> String -> Result Error (List a)
+decodeCsv : Headers -> Decoder a -> String -> Result Error (List a)
 decodeCsv =
     decodeCustom
         { rowSeparator = "\u{000D}\n"
@@ -189,6 +195,7 @@ tab-separated values where the row separator is just a newline character:
         { rowSeparator = "\n"
         , fieldSeparator = "\t"
         }
+        NoHeaders
         (map2 Tuple.pair
             (column 0 int)
             (column 1 string)
@@ -197,8 +204,8 @@ tab-separated values where the row separator is just a newline character:
         --> Ok [ ( 1, "Brian" ), ( 2, "Atlas" ) ]
 
 -}
-decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Decoder a -> String -> Result Error (List a)
-decodeCustom separators (Decoder decode) source =
+decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Headers -> Decoder a -> String -> Result Error (List a)
+decodeCustom separators headers (Decoder decode) source =
     case Parser.customConfig separators of
         Err configProblem ->
             Err (ConfigError configProblem)
@@ -349,9 +356,9 @@ errorToString error =
 
 {-| Decode a value, then transform it before returning.
 
-    decodeCsv (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
+    decodeCsv NoHeaders (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
 
-    decodeCsv (map String.reverse string) "slap" --> Ok [ "pals" ]
+    decodeCsv NoHeaders (map String.reverse string) "slap" --> Ok [ "pals" ]
 
 -}
 map : (from -> to) -> Decoder from -> Decoder to
@@ -362,6 +369,7 @@ map transform (Decoder decoder) =
 {-| Combine two decoders to make something else, for example a record:
 
     decodeCsv
+        NoHeaders
         (map2 (\id name -> { id = id, name = name })
             (column 0 int)
             (column 1 string)
@@ -414,7 +422,7 @@ send it values by providing decoders.
 
 Now you can decode pets like this:
 
-    decodeCsv petDecoder "1,Atlas,cat,14.5"
+    decodeCsv NoHeaders petDecoder "1,Atlas,cat,14.5"
     --> Ok [ { id = 1, name = "Atlas", species = "cat", weight = 14.5 } ]
 
 -}
@@ -469,9 +477,9 @@ you might do this:
 
 You could then use it like this:
 
-    decodeCsv myInt "1" -- Ok [ 1 ]
+    decodeCsv NoHeaders myInt "1" -- Ok [ 1 ]
 
-    decodeCsv myInt "fruit"
+    decodeCsv NoHeaders myInt "fruit"
     -- Err { row = 0, problem = Failure "Hey, that's not an int!" }
 
 -}

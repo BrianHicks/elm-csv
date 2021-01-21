@@ -1,6 +1,6 @@
 module Csv.DecodeTest exposing (..)
 
-import Csv.Decode as Decode exposing (Decoder, Error(..))
+import Csv.Decode as Decode exposing (Decoder, Error(..), Headers(..))
 import Expect
 import Test exposing (..)
 
@@ -11,17 +11,17 @@ stringTest =
         [ test "a blank string" <|
             \_ ->
                 "\"\""
-                    |> Decode.decodeCsv Decode.string
+                    |> Decode.decodeCsv NoHeaders Decode.string
                     |> Expect.equal (Ok [ "" ])
         , test "a unquoted value" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv Decode.string
+                    |> Decode.decodeCsv NoHeaders Decode.string
                     |> Expect.equal (Ok [ "a" ])
         , test "an integer" <|
             \_ ->
                 "1"
-                    |> Decode.decodeCsv Decode.string
+                    |> Decode.decodeCsv NoHeaders Decode.string
                     |> Expect.equal (Ok [ "1" ])
         ]
 
@@ -32,12 +32,12 @@ intTest =
         [ test "a valid integer" <|
             \_ ->
                 "1"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.int)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.int)
                     |> Expect.equal (Ok [ 1 ])
         , test "an invalid integer" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.int)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.int)
                     |> Expect.equal
                         (Err
                             (DecodingError
@@ -55,17 +55,17 @@ floatTest =
         [ test "a float shaped like an integer" <|
             \_ ->
                 "1"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.float)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.float)
                     |> Expect.equal (Ok [ 1.0 ])
         , test "a float shaped like a floating-point number" <|
             \_ ->
                 "3.14"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.float)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.float)
                     |> Expect.equal (Ok [ 3.14 ])
         , test "an invalid float" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.float)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.float)
                     |> Expect.equal
                         (Err
                             (DecodingError
@@ -83,17 +83,17 @@ columnTest =
         [ test "can get the only column" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.string)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.string)
                     |> Expect.ok
         , test "can get an arbitrary column" <|
             \_ ->
                 "a,b,c"
-                    |> Decode.decodeCsv (Decode.column 1 Decode.string)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 1 Decode.string)
                     |> Expect.equal (Ok [ "b" ])
         , test "issues an error if the column doesn't exist" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.column 1 Decode.string)
+                    |> Decode.decodeCsv NoHeaders (Decode.column 1 Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.ExpectedColumn 1 }))
         ]
@@ -105,12 +105,12 @@ mapTest =
         [ test "can map a single value" <|
             \_ ->
                 "5"
-                    |> Decode.decodeCsv (Decode.column 0 Decode.int |> Decode.map (\i -> i * 2))
+                    |> Decode.decodeCsv NoHeaders (Decode.column 0 Decode.int |> Decode.map (\i -> i * 2))
                     |> Expect.equal (Ok [ 10 ])
         , test "map2" <|
             \_ ->
                 "1,Atlas"
-                    |> Decode.decodeCsv
+                    |> Decode.decodeCsv NoHeaders
                         (Decode.map2 Tuple.pair
                             (Decode.column 0 Decode.int)
                             (Decode.column 1 Decode.string)
@@ -120,7 +120,7 @@ mapTest =
         , test "map3" <|
             \_ ->
                 "1,Atlas,Cat"
-                    |> Decode.decodeCsv
+                    |> Decode.decodeCsv NoHeaders
                         (Decode.map3 (\id name species -> ( id, name, species ))
                             (Decode.column 0 Decode.int)
                             (Decode.column 1 Decode.string)
@@ -137,12 +137,12 @@ succeedTest =
         [ test "ignores the values you send it in favor of the value you provide" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.succeed ())
+                    |> Decode.decodeCsv NoHeaders (Decode.succeed ())
                     |> Expect.equal (Ok [ () ])
         , test "provides one value for each row" <|
             \_ ->
                 "a\u{000D}\nb"
-                    |> Decode.decodeCsv (Decode.succeed ())
+                    |> Decode.decodeCsv NoHeaders (Decode.succeed ())
                     |> Expect.equal (Ok [ (), () ])
         ]
 
@@ -153,7 +153,7 @@ failTest =
         [ test "ignores the values you send it in favor of the value you provide" <|
             \_ ->
                 "a"
-                    |> Decode.decodeCsv (Decode.fail "a nice description")
+                    |> Decode.decodeCsv NoHeaders (Decode.fail "a nice description")
                     |> Expect.equal
                         (Err
                             (DecodingError
@@ -165,7 +165,7 @@ failTest =
         , test "fails on the first row where it's attempted" <|
             \_ ->
                 "a\u{000D}\nb"
-                    |> Decode.decodeCsv (Decode.fail "a nice description")
+                    |> Decode.decodeCsv NoHeaders (Decode.fail "a nice description")
                     |> Expect.equal
                         (Err
                             (DecodingError
@@ -197,12 +197,12 @@ andThenTest =
             [ test "allows positive integers" <|
                 \_ ->
                     "1"
-                        |> Decode.decodeCsv (Decode.column 0 positiveInteger)
+                        |> Decode.decodeCsv NoHeaders (Decode.column 0 positiveInteger)
                         |> Expect.equal (Ok [ 1 ])
             , test "disallows negative integers" <|
                 \_ ->
                     "-1"
-                        |> Decode.decodeCsv (Decode.column 0 positiveInteger)
+                        |> Decode.decodeCsv NoHeaders (Decode.column 0 positiveInteger)
                         |> Expect.equal
                             (Err
                                 (DecodingError
@@ -222,17 +222,17 @@ andThenTest =
             [ test "get the second column" <|
                 \_ ->
                     "1,a,b"
-                        |> Decode.decodeCsv followThePointer
+                        |> Decode.decodeCsv NoHeaders followThePointer
                         |> Expect.equal (Ok [ "a" ])
             , test "get the third column" <|
                 \_ ->
                     "2,a,b"
-                        |> Decode.decodeCsv followThePointer
+                        |> Decode.decodeCsv NoHeaders followThePointer
                         |> Expect.equal (Ok [ "b" ])
             , test "has a reasonable error message for missing a column" <|
                 \_ ->
                     "3,a,b"
-                        |> Decode.decodeCsv followThePointer
+                        |> Decode.decodeCsv NoHeaders followThePointer
                         |> Expect.equal
                             (Err
                                 (DecodingError
