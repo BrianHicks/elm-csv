@@ -1,6 +1,6 @@
 module Csv.DecodeTest exposing (..)
 
-import Csv.Decode as Decode exposing (Decoder)
+import Csv.Decode as Decode exposing (Decoder, Error(..))
 import Expect
 import Test exposing (..)
 
@@ -40,9 +40,11 @@ intTest =
                     |> Decode.decodeCsv (Decode.column 0 Decode.int)
                     |> Expect.equal
                         (Err
-                            { row = 0
-                            , problem = Decode.ExpectedInt "a"
-                            }
+                            (DecodingError
+                                { row = 0
+                                , problem = Decode.ExpectedInt "a"
+                                }
+                            )
                         )
         ]
 
@@ -66,9 +68,11 @@ floatTest =
                     |> Decode.decodeCsv (Decode.column 0 Decode.float)
                     |> Expect.equal
                         (Err
-                            { row = 0
-                            , problem = Decode.ExpectedFloat "a"
-                            }
+                            (DecodingError
+                                { row = 0
+                                , problem = Decode.ExpectedFloat "a"
+                                }
+                            )
                         )
         ]
 
@@ -91,7 +95,7 @@ columnTest =
                 "a"
                     |> Decode.decodeCsv (Decode.column 1 Decode.string)
                     |> Expect.equal
-                        (Err { row = 0, problem = Decode.ExpectedColumn 1 })
+                        (Err (DecodingError { row = 0, problem = Decode.ExpectedColumn 1 }))
         ]
 
 
@@ -152,9 +156,11 @@ failTest =
                     |> Decode.decodeCsv (Decode.fail "a nice description")
                     |> Expect.equal
                         (Err
-                            { problem = Decode.Failure "a nice description"
-                            , row = 0
-                            }
+                            (DecodingError
+                                { problem = Decode.Failure "a nice description"
+                                , row = 0
+                                }
+                            )
                         )
         , test "fails on the first row where it's attempted" <|
             \_ ->
@@ -162,9 +168,11 @@ failTest =
                     |> Decode.decodeCsv (Decode.fail "a nice description")
                     |> Expect.equal
                         (Err
-                            { problem = Decode.Failure "a nice description"
-                            , row = 0
-                            }
+                            (DecodingError
+                                { problem = Decode.Failure "a nice description"
+                                , row = 0
+                                }
+                            )
                         )
         ]
 
@@ -197,9 +205,11 @@ andThenTest =
                         |> Decode.decodeCsv (Decode.column 0 positiveInteger)
                         |> Expect.equal
                             (Err
-                                { problem = Decode.Failure "Only positive integers are allowed!"
-                                , row = 0
-                                }
+                                (DecodingError
+                                    { problem = Decode.Failure "Only positive integers are allowed!"
+                                    , row = 0
+                                    }
+                                )
                             )
             ]
         , describe "for fields depending on each other" <|
@@ -225,9 +235,11 @@ andThenTest =
                         |> Decode.decodeCsv followThePointer
                         |> Expect.equal
                             (Err
-                                { problem = Decode.ExpectedColumn 3
-                                , row = 0
-                                }
+                                (DecodingError
+                                    { problem = Decode.ExpectedColumn 3
+                                    , row = 0
+                                    }
+                                )
                             )
             ]
         ]

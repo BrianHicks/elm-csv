@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
     , column
-    , decodeCsv, decodeCustom, Error, errorToString, Problem(..)
+    , decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
     , succeed, fail, andThen
     )
@@ -35,6 +35,7 @@ All of those functions have examples in their documentation. Check 'em out!
 -}
 
 import Csv.Parser as Parser
+import Parser as ElmParser
 import Parser.Advanced
 
 
@@ -56,7 +57,7 @@ type Decoder a
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv string "a,b" --> Err { row = 0, problem = AmbiguousColumn }
+    decodeCsv string "a,b" --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
 string : Decoder String
@@ -71,13 +72,13 @@ string =
     decodeCsv int "-1" --> Ok [ -1 ]
 
     decodeCsv int "volcano"
-    --> Err { row = 0, problem = ExpectedInt "volcano" }
+    --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
     decodeCsv int "1,2"
-    --> Err { row = 0, problem = AmbiguousColumn }
+    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
 int : Decoder Int
@@ -102,13 +103,13 @@ int =
     decodeCsv float "3.14" --> Ok [ 3.14 ]
 
     decodeCsv float "mimesis"
-    --> Err { row = 0, problem = ExpectedFloat "mimesis" }
+    --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
     decodeCsv float "1.0,2.0"
-    --> Err { row = 0, problem = AmbiguousColumn }
+    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
 float : Decoder Float
@@ -151,7 +152,7 @@ getOnly transform row =
     decodeCsv (column 1 int) "1,2,3"--> Ok [ 2 ]
 
     decodeCsv (column 100 float) "3.14"
-    --> Err { row = 0, problem = ExpectedColumn 100 }
+    --> Err (DecodingError { row = 0, problem = ExpectedColumn 100 })
 
 -}
 column : Int -> Decoder a -> Decoder a
@@ -200,12 +201,7 @@ decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Decoder a -
 decodeCustom separators (Decoder decode) source =
     case Parser.customConfig separators of
         Err configProblem ->
-            -- hmm, the row # here is a little weird and not necessarily
-            -- accurate. What to do?
-            Err
-                { row = 0
-                , problem = ConfigProblem configProblem
-                }
+            Err (ConfigError configProblem)
 
         Ok config ->
             case Parser.parse config source of
@@ -225,28 +221,25 @@ decodeCustom separators (Decoder decode) source =
                             )
                             (Ok ( [], 0 ))
                         |> Result.map (Tuple.first >> List.reverse)
+                        |> Result.mapError DecodingError
 
-                Err _ ->
-                    -- TODO: really punting on error message quality here but we'll
-                    -- get back to it!
-                    Err { row = 0, problem = ParsingProblem }
+                Err deadEnds ->
+                    Err (ParsingError deadEnds)
 
 
 {-| Sometimes things go wrong. This record lets you know where exactly that
 happened so you can go fix it.
 -}
-type alias Error =
-    { problem : Problem
-    , row : Int
-    }
+type Error
+    = ConfigError Parser.ConfigProblem
+    | ParsingError (List ElmParser.DeadEnd)
+    | DecodingError { row : Int, problem : Problem }
 
 
 {-| What, exactly, went wrong?
 -}
 type Problem
-    = ConfigProblem Parser.ConfigProblem
-    | ParsingProblem
-    | ExpectedColumn Int
+    = ExpectedColumn Int
     | AmbiguousColumn
     | ExpectedInt String
     | ExpectedFloat String
