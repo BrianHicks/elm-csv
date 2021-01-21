@@ -74,5 +74,4 @@ In particular, I've worked with Elm for a long time and would be happy to advise
 
 ## License
 
-BSD 3-Clause.
-See [LICENSE](LICENSE)
+`elm-csv` is licensed under the BSD 3-Clause license, located at `LICENSE`.
