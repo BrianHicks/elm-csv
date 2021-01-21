@@ -86,6 +86,23 @@ parseTest =
                         \_ ->
                             expectRoundTrip config
                                 [ [ "", "", "" ] ]
+                    , test "only half of a row separator" <|
+                        \_ ->
+                            case String.uncons config.rowSeparator of
+                                Nothing ->
+                                    -- really shouldn't ever happen but
+                                    -- we'll let it slide here since it's
+                                    -- caught in other places.
+                                    Expect.pass
+
+                                Just ( first, "" ) ->
+                                    -- not relevant here
+                                    Expect.pass
+
+                                Just ( first, _ ) ->
+                                    String.fromList [ first ]
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal (Ok [ [ String.fromList [ first ] ] ])
                     , describe "quoted values"
                         [ test "quoted single values" <|
                             \_ ->

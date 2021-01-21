@@ -67,6 +67,8 @@ type Context
 type Problem
     = ExpectingRowSeparator String
     | ExpectingFieldSeparator String
+    | ExpectingStartOfRowSeparator Char
+    | ExpectingStartOfFieldSeparator Char
     | ExpectingQuote
     | ExpectingEscapedQuote
     | ExpectingEnd
@@ -86,42 +88,47 @@ parser config_ =
 
 rowParser : InternalConfig -> Parser Context Problem (List String)
 rowParser config_ =
-    Parser.inContext Row
-        (Parser.succeed (::)
-            |= fieldParser config_
-            |= Parser.loop []
-                (\soFar ->
-                    Parser.oneOf
-                        [ -- if we see a field separator, it MUST be followed
-                          -- by a field
-                          Parser.succeed (\field -> Parser.Loop (field :: soFar))
-                            |. Parser.token config_.fieldSeparator
-                            |= fieldParser config_
-                        , -- if the row is done, get out!
-                          Parser.succeed (\_ -> Parser.Done (List.reverse soFar))
-                            |= Parser.oneOf
-                                [ Parser.end ExpectingEnd
-                                , Parser.token config_.rowSeparator
-                                ]
-                        ]
-                )
-        )
+    Parser.inContext Row <|
+        Parser.loop [] <|
+            \fields ->
+                Parser.map
+                    (\( field, afterField ) ->
+                        case afterField of
+                            AnotherField ->
+                                Parser.Loop (field :: fields)
+
+                            NoMore ->
+                                Parser.Done (List.reverse (field :: fields))
+                    )
+                    (fieldParser config_)
 
 
-fieldParser : InternalConfig -> Parser Context Problem String
-fieldParser config_ =
+type AfterField
+    = AnotherField
+    | NoMore
+
+
+afterFieldParser : InternalConfig -> Parser Context Problem AfterField
+afterFieldParser config_ =
     Parser.oneOf
-        [ quotedFieldParser
-        , Parser.chompWhile (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
-            |> Parser.getChompedString
-            |> Parser.inContext Field
+        [ Parser.map (\_ -> AnotherField) (Parser.token config_.fieldSeparator)
+        , Parser.map (\_ -> NoMore) (Parser.token config_.rowSeparator)
+        , Parser.map (\_ -> NoMore) (Parser.end ExpectingEnd)
         ]
 
 
-quotedFieldParser : Parser Context Problem String
-quotedFieldParser =
+fieldParser : InternalConfig -> Parser Context Problem ( String, AfterField )
+fieldParser config_ =
+    Parser.oneOf
+        [ quotedFieldParser config_
+        , unquotedFieldParser config_
+        ]
+
+
+quotedFieldParser : InternalConfig -> Parser Context Problem ( String, AfterField )
+quotedFieldParser config_ =
     Parser.inContext QuotedField <|
-        Parser.succeed identity
+        Parser.succeed Tuple.pair
             |. Parser.token quote
             |= Parser.loop []
                 (\soFar ->
@@ -134,6 +141,38 @@ quotedFieldParser =
                             |= Parser.getChompedString (Parser.chompUntil quote)
                         ]
                 )
+            |= afterFieldParser config_
+
+
+unquotedFieldParser : InternalConfig -> Parser Context Problem ( String, AfterField )
+unquotedFieldParser config_ =
+    Parser.inContext Field <|
+        Parser.loop [] <|
+            \segments ->
+                Parser.oneOf
+                    [ Parser.succeed
+                        (\afterField ->
+                            Parser.Done
+                                ( String.concat (List.reverse segments)
+                                , afterField
+                                )
+                        )
+                        |= afterFieldParser config_
+                    , Parser.succeed (\segment -> Parser.Loop (segment :: segments))
+                        |= Parser.oneOf
+                            [ Parser.chompIf
+                                (\c -> c == config_.newRowIndicator)
+                                (ExpectingStartOfRowSeparator config_.newRowIndicator)
+                                |> Parser.getChompedString
+                            , Parser.chompIf
+                                (\c -> c == config_.newFieldIndicator)
+                                (ExpectingStartOfFieldSeparator config_.newFieldIndicator)
+                                |> Parser.getChompedString
+                            , Parser.chompWhile
+                                (\c -> c /= config_.newFieldIndicator && c /= config_.newRowIndicator)
+                                |> Parser.getChompedString
+                            ]
+                    ]
 
 
 quote : Parser.Token Problem
