@@ -61,41 +61,8 @@ getOnly transform row =
 
 
 
-{-
-
-   bool : Location -> Decoder Bool
-
-
-
-
-
-
-      -- DATA STRUCTURES
-
-
-      -- nullable doesn't make sense as a name since CSV does not have a
-      -- null data type. When this gets uncommented, what about `optional`?
-      nullable : Decoder a -> Decoder (Maybe a)
-
-      -- maybe also add `blankable?`
-
-
-
-      -- escape hatch to JSON?
-      -- list
-      -- array
-      -- dict
-      -- keyValuePairs
-      -- oneOrMore
-      ----------
-      -- OBJECT PRIMITIVES
-
-      field : String -> Decoder a -> Decoder a
-      -- index
--}
--- field : String -> Location
--- field name =
---     LocationTODO
+-- LOCATIONS
+-- TODO: field
 
 
 column : Int -> Decoder a -> Decoder a
@@ -111,16 +78,6 @@ column col (Decoder decoder) =
 
 
 
-{-
-
-   ----------
-   -- INCONSISTENT STRUCTURE
-   -- maybe
-
-
-   oneOf : List (Decoder a) -> Decoder a
-
--}
 -- RUN DECODERS
 
 
@@ -148,18 +105,6 @@ decodeCsvString (Decoder decode) source =
             -- TODO: really punting on error message quality here but we'll
             -- get back to it!
             Err { row = 0, problem = ParsingProblem }
-
-
-
-{-
-   decodeValue : Decoder a -> Value -> Result Error a
-
-
-   type Value
-       = TODODefinedElsewhere
-
-
--}
 
 
 type alias Error =
@@ -213,28 +158,7 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
 
 
 
--- map4, map5, map6, map7, map8
-{-
-
-
-
-   lazy : (() -> Decoder a) -> Decoder a
-
-
-   -- value
-
-
-   null : a -> Decoder a
-
-
-   succeed : a -> Decoder a
-
-
-   fail : String -> Decoder a
-
-
-   andThen : (from -> Decoder to) -> Decoder from -> Decoder to
--}
+-- map4, map5, map6, map7, map8 or maybe pipelines?
 -- FANCY DECODING
 
 
