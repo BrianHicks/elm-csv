@@ -2,7 +2,7 @@ module Csv.Decode exposing
     ( Decoder, string, int, float
     , column
     , decodeCsv, Error, errorToString, Problem(..)
-    , map, map2, map3
+    , map, map2, map3, pipeline, required
     , succeed, fail, andThen
     )
 
@@ -14,7 +14,7 @@ module Csv.Decode exposing
 
 @docs decodeCsv, decodeCustom, Error, errorToString, Problem
 
-@docs map, map2, map3
+@docs map, map2, map3, pipeline, required
 
 @docs succeed, fail, andThen
 
@@ -278,8 +278,44 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
         )
 
 
+{-| Need to decode into an object? Use a pipeline instead. The way this works:
+you provide a function that takes as many arguments as you need, and then
+send it values by providing decoders.
 
--- map4, map5, map6, map7, map8 or maybe pipelines?
+    type alias Pet =
+        { id : Int
+        , name : String
+        , species : String
+        , weight : Float
+        }
+
+    petDecoder : Decoder Pet
+    petDecoder =
+        pipeline Pet
+            |> required (column 0 int)
+            |> required (column 1 string)
+            |> required (column 2 string)
+            |> required (column 3 float)
+
+Now you can decode pets like this:
+
+    decodeCsv petDecoder "1,Atlas,cat,14.5"
+    --> Ok [ { id = 1, name = "Atlas", species = "cat", weight = 14.5 } ]
+
+-}
+pipeline : (a -> b) -> Decoder (a -> b)
+pipeline =
+    succeed
+
+
+{-| See [`pipeline`](#pipeline).
+-}
+required : Decoder a -> Decoder (a -> b) -> Decoder b
+required =
+    map2 (\value fn -> fn value)
+
+
+
 -- FANCY DECODING
 
 
