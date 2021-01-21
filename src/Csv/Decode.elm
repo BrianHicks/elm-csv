@@ -1,12 +1,26 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
     , column
-    , decodeCsv, Error, errorToString, Problem(..)
+    , decodeCsv, decodeCustom, Error, errorToString, Problem(..)
     , map, map2, map3, pipeline, required
     , succeed, fail, andThen
     )
 
-{-|
+{-| Decode values from CSV. A crash course on constructing decoders:
+
+  - To decode basic values in different columns, use [`field`](#field) or
+    [`column`](#column) along with [`int`](#int), [`string`](#string), or
+    [`float`](#float).
+  - To transform values in ways that can't fail, pass them to [`map`](#map). To
+    transform them in ways that _can_ fail, pass decoders to
+    [`andThen`](#andThen) and call [`succeed`](#succeed) or [`fail`](#fail)
+    to handle the failure gracefully.
+  - To decode simple multi-field values, pass a constructor to [`map2`](#map2)
+    or [`map3`](#map3).
+  - For records with more than two or three values, use [`pipeline`](#pipeline)
+    and [`required`](#required).
+
+All of those functions have examples in their documentation. Check 'em out!
 
 @docs Decoder, string, int, float
 
@@ -28,6 +42,9 @@ import Parser.Advanced
 -- PRIMITIVES
 
 
+{-| A way to specify what kind of thing you want to decode into. For example,
+if you have a `Pet` data type, you'd want a `Decoder Pet`.
+-}
 type Decoder a
     = Decoder (List String -> Result Problem a)
 
@@ -153,8 +170,8 @@ column col (Decoder decoder) =
 -- RUN DECODERS
 
 
-{-| Convert a String into some type you care about using the `Decoder`s in
-this module!
+{-| Convert a CSV string into some type you care about using the `Decoder`s
+in this module!
 -}
 decodeCsv : Decoder a -> String -> Result Error (List a)
 decodeCsv =
@@ -164,6 +181,21 @@ decodeCsv =
         }
 
 
+{-| Convert something shaped roughly like a CSV. For example, to decode
+tab-separated values where the row separator is just a newline character:
+
+    decodeCustom
+        { rowSeparator = "\n"
+        , fieldSeparator = "\t"
+        }
+        (map2 Tuple.pair
+            (column 0 int)
+            (column 1 string)
+        )
+        "1\tBrian\n2\tAtlas"
+        --> Ok [ ( 1, "Brian" ), ( 2, "Atlas" ) ]
+
+-}
 decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Decoder a -> String -> Result Error (List a)
 decodeCustom separators (Decoder decode) source =
     case Parser.customConfig separators of
