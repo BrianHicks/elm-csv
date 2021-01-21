@@ -190,6 +190,12 @@ mapTest =
         ]
 
 
+oneOfTest : Test
+oneOfTest =
+    describe "oneOf"
+        []
+
+
 succeedTest : Test
 succeedTest =
     describe "succeed"

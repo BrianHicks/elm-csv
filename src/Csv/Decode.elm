@@ -3,7 +3,7 @@ module Csv.Decode exposing
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
-    , succeed, fail, andThen
+    , oneOf, succeed, fail, andThen
     )
 
 {-| Decode values from CSV. A crash course on constructing decoders:
@@ -30,7 +30,7 @@ All of those functions have examples in their documentation. Check 'em out!
 
 @docs map, map2, map3, pipeline, required
 
-@docs succeed, fail, andThen
+@docs oneOf, succeed, fail, andThen
 
 -}
 
@@ -527,6 +527,11 @@ required =
 
 
 -- FANCY DECODING
+
+
+oneOf : List (Decoder a) -> Decoder a
+oneOf _ =
+    fail "TODO"
 
 
 {-| Always succeed, no matter what. Mostly useful with `andThen` (see that
