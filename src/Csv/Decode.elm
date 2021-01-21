@@ -249,8 +249,98 @@ type Problem
 {-| Want an easier-to-read version of an `Error`? Here we are!
 -}
 errorToString : Error -> String
-errorToString _ =
-    "TODO"
+errorToString error =
+    case error of
+        ConfigError Parser.NeedNonBlankFieldSeparator ->
+            "Field separator must not be blank."
+
+        ConfigError Parser.NeedNonBlankRowSeparator ->
+            "Row separator must not be blank."
+
+        ParsingError deadEnds ->
+            deadEnds
+                |> List.map
+                    (\deadEnd ->
+                        let
+                            -- NOTE: we don't actually expect to see most of these,
+                            -- but I'm going to avoid punting on making nice errors!
+                            problemString =
+                                case deadEnd.problem of
+                                    ElmParser.Expecting expecting ->
+                                        "expected to see `" ++ expecting ++ "`."
+
+                                    ElmParser.ExpectingInt ->
+                                        "expected to see an int."
+
+                                    ElmParser.ExpectingHex ->
+                                        "expected to see a hex number."
+
+                                    ElmParser.ExpectingOctal ->
+                                        "expected to see an octal number."
+
+                                    ElmParser.ExpectingBinary ->
+                                        "expected to see a binary number."
+
+                                    ElmParser.ExpectingFloat ->
+                                        "expected to see a floating-point number."
+
+                                    ElmParser.ExpectingNumber ->
+                                        "expected to see a number."
+
+                                    ElmParser.ExpectingVariable ->
+                                        "expected to see a variable."
+
+                                    ElmParser.ExpectingSymbol symbol ->
+                                        "expected to see a `" ++ symbol ++ "` symbol."
+
+                                    ElmParser.ExpectingKeyword keyword ->
+                                        "expected to see a `" ++ keyword ++ "` keyword."
+
+                                    ElmParser.ExpectingEnd ->
+                                        "expected the end of the input."
+
+                                    ElmParser.UnexpectedChar ->
+                                        "unexpected character."
+
+                                    ElmParser.Problem problem ->
+                                        problem
+
+                                    ElmParser.BadRepeat ->
+                                        "got a bad repeat (this is an internal problem and should be reported as a bug.)"
+                        in
+                        " - at line "
+                            ++ String.fromInt deadEnd.row
+                            ++ ", character "
+                            ++ String.fromInt deadEnd.col
+                            ++ ": "
+                            ++ problemString
+                    )
+                |> String.concat
+                |> (++) "There were some problems parsing the source:\n\n"
+
+        DecodingError err ->
+            let
+                problemString =
+                    case err.problem of
+                        ExpectedColumn i ->
+                            "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
+
+                        AmbiguousColumn ->
+                            "I needed there to be exactly one column."
+
+                        ExpectedInt notInt ->
+                            "I expected to parse an int from `" ++ notInt ++ "`, but couldn't."
+
+                        ExpectedFloat notFloat ->
+                            "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't."
+
+                        Failure custom ->
+                            custom
+            in
+            "There was a problem on row "
+                ++ String.fromInt err.row
+                ++ ": "
+                ++ problemString
 
 
 
