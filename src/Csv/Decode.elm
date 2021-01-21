@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
     , column, field
-    , Headers(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
+    , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
     , succeed, fail, andThen
     )
@@ -26,7 +26,7 @@ All of those functions have examples in their documentation. Check 'em out!
 
 @docs column, field
 
-@docs Headers, decodeCsv, decodeCustom, Error, errorToString, Problem
+@docs FieldNames, decodeCsv, decodeCustom, Error, errorToString, Problem
 
 @docs map, map2, map3, pipeline, required
 
@@ -53,12 +53,12 @@ type Decoder a
 
 {-| Decode a string from a CSV.
 
-    decodeCsv NoHeaders string "a" --> Ok [ "a" ]
+    decodeCsv NoFieldNames string "a" --> Ok [ "a" ]
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv NoHeaders string "a,b"
+    decodeCsv NoFieldNames string "a,b"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
@@ -69,17 +69,17 @@ string =
 
 {-| Decode an integer from a CSV.
 
-    decodeCsv NoHeaders int "1" --> Ok [ 1 ]
+    decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
-    decodeCsv NoHeaders int "-1" --> Ok [ -1 ]
+    decodeCsv NoFieldNames int "-1" --> Ok [ -1 ]
 
-    decodeCsv NoHeaders int "volcano"
+    decodeCsv NoFieldNames int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv NoHeaders int "1,2"
+    decodeCsv NoFieldNames int "1,2"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
@@ -101,17 +101,17 @@ int =
 
 {-| Decode an integer from a CSV.
 
-    decodeCsv NoHeaders float "3" --> Ok [ 3.0 ]
+    decodeCsv NoFieldNames float "3" --> Ok [ 3.0 ]
 
-    decodeCsv NoHeaders float "3.14" --> Ok [ 3.14 ]
+    decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
 
-    decodeCsv NoHeaders float "mimesis"
+    decodeCsv NoFieldNames float "mimesis"
     --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeCsv NoHeaders float "1.0,2.0"
+    decodeCsv NoFieldNames float "1.0,2.0"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
 
 -}
@@ -151,11 +151,11 @@ getOnly transform row =
 
 {-| Parse a value at a given column in the CSV.
 
-    decodeCsv NoHeaders (column 0 string) "Argentina" --> Ok [ "Argentina" ]
+    decodeCsv NoFieldNames (column 0 string) "Argentina" --> Ok [ "Argentina" ]
 
-    decodeCsv NoHeaders (column 1 int) "1,2,3"--> Ok [ 2 ]
+    decodeCsv NoFieldNames (column 1 int) "1,2,3"--> Ok [ 2 ]
 
-    decodeCsv NoHeaders (column 100 float) "3.14"
+    decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err (DecodingError { row = 0, problem = ExpectedColumn 100 })
 
 -}
@@ -188,18 +188,16 @@ field name (Decoder decoder) =
 -- RUN DECODERS
 
 
-type Headers
-    = NoHeaders
-    | CustomHeaders (List String)
+type FieldNames
+    = NoFieldNames
+    | CustomFieldNames (List String)
+    | FromFirstRow
 
 
-headersToNames : Headers -> Dict String Int
-headersToNames headers =
-    case headers of
-        NoHeaders ->
-            Dict.empty
-
-        CustomHeaders names ->
+getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, List (List String) )
+getFieldNames headers rows =
+    let
+        fromList names =
             names
                 |> List.foldl
                     (\name ( soFar, i ) ->
@@ -209,12 +207,27 @@ headersToNames headers =
                     )
                     ( Dict.empty, 0 )
                 |> Tuple.first
+    in
+    case headers of
+        NoFieldNames ->
+            Ok ( Dict.empty, rows )
+
+        CustomFieldNames names ->
+            Ok ( fromList names, rows )
+
+        FromFirstRow ->
+            case rows of
+                [] ->
+                    Err (DecodingError { row = 0, problem = NoFieldNamesOnFirstRow })
+
+                first :: rest ->
+                    Ok ( fromList first, rest )
 
 
 {-| Convert a CSV string into some type you care about using the `Decoder`s
 in this module!
 -}
-decodeCsv : Headers -> Decoder a -> String -> Result Error (List a)
+decodeCsv : FieldNames -> Decoder a -> String -> Result Error (List a)
 decodeCsv =
     decodeCustom
         { rowSeparator = "\u{000D}\n"
@@ -229,7 +242,7 @@ tab-separated values where the row separator is just a newline character:
         { rowSeparator = "\n"
         , fieldSeparator = "\t"
         }
-        NoHeaders
+        NoFieldNames
         (map2 Tuple.pair
             (column 0 int)
             (column 1 string)
@@ -238,38 +251,36 @@ tab-separated values where the row separator is just a newline character:
         --> Ok [ ( 1, "Brian" ), ( 2, "Atlas" ) ]
 
 -}
-decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Headers -> Decoder a -> String -> Result Error (List a)
-decodeCustom separators headers (Decoder decode) source =
-    case Parser.customConfig separators of
-        Err configProblem ->
-            Err (ConfigError configProblem)
+decodeCustom : { rowSeparator : String, fieldSeparator : String } -> FieldNames -> Decoder a -> String -> Result Error (List a)
+decodeCustom separators fieldNames decoder source =
+    Parser.customConfig separators
+        |> Result.mapError ConfigError
+        |> Result.andThen (\config -> Parser.parse config source |> Result.mapError ParsingError)
+        |> Result.andThen (applyDecoder fieldNames decoder)
 
-        Ok config ->
-            case Parser.parse config source of
-                Ok rows ->
-                    let
-                        names =
-                            headersToNames headers
-                    in
-                    rows
-                        |> List.foldl
-                            (\row ->
-                                Result.andThen
-                                    (\( soFar, rowNum ) ->
-                                        case decode ( names, row ) of
-                                            Ok val ->
-                                                Ok ( val :: soFar, rowNum - 1 )
 
-                                            Err problem ->
-                                                Err { row = rowNum, problem = problem }
-                                    )
+applyDecoder : FieldNames -> Decoder a -> List (List String) -> Result Error (List a)
+applyDecoder fieldNames (Decoder decode) allRows =
+    Result.andThen
+        (\( names, rows ) ->
+            rows
+                |> List.foldl
+                    (\row ->
+                        Result.andThen
+                            (\( soFar, rowNum ) ->
+                                case decode ( names, row ) of
+                                    Ok val ->
+                                        Ok ( val :: soFar, rowNum - 1 )
+
+                                    Err problem ->
+                                        Err { row = rowNum, problem = problem }
                             )
-                            (Ok ( [], 0 ))
-                        |> Result.map (Tuple.first >> List.reverse)
-                        |> Result.mapError DecodingError
-
-                Err deadEnds ->
-                    Err (ParsingError deadEnds)
+                    )
+                    (Ok ( [], 0 ))
+                |> Result.map (Tuple.first >> List.reverse)
+                |> Result.mapError DecodingError
+        )
+        (getFieldNames fieldNames allRows)
 
 
 {-| Sometimes things go wrong. This record lets you know where exactly that
@@ -284,7 +295,8 @@ type Error
 {-| What, exactly, went wrong?
 -}
 type Problem
-    = ExpectedColumn Int
+    = NoFieldNamesOnFirstRow
+    | ExpectedColumn Int
     | ExpectedField String
     | AmbiguousColumn
     | ExpectedInt String
@@ -368,6 +380,9 @@ errorToString error =
             let
                 problemString =
                     case err.problem of
+                        NoFieldNamesOnFirstRow ->
+                            "I expected to see field names on the first row, but there were none."
+
                         ExpectedColumn i ->
                             "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
 
@@ -398,9 +413,9 @@ errorToString error =
 
 {-| Decode a value, then transform it before returning.
 
-    decodeCsv NoHeaders (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
+    decodeCsv NoFieldNames (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
 
-    decodeCsv NoHeaders (map String.reverse string) "slap" --> Ok [ "pals" ]
+    decodeCsv NoFieldNames (map String.reverse string) "slap" --> Ok [ "pals" ]
 
 -}
 map : (from -> to) -> Decoder from -> Decoder to
@@ -411,7 +426,7 @@ map transform (Decoder decoder) =
 {-| Combine two decoders to make something else, for example a record:
 
     decodeCsv
-        NoHeaders
+        NoFieldNames
         (map2 (\id name -> { id = id, name = name })
             (column 0 int)
             (column 1 string)
@@ -464,7 +479,7 @@ send it values by providing decoders.
 
 Now you can decode pets like this:
 
-    decodeCsv NoHeaders petDecoder "1,Atlas,cat,14.5"
+    decodeCsv NoFieldNames petDecoder "1,Atlas,cat,14.5"
     --> Ok [ { id = 1, name = "Atlas", species = "cat", weight = 14.5 } ]
 
 -}
@@ -519,9 +534,9 @@ you might do this:
 
 You could then use it like this:
 
-    decodeCsv NoHeaders myInt "1" -- Ok [ 1 ]
+    decodeCsv NoFieldNames myInt "1" -- Ok [ 1 ]
 
-    decodeCsv NoHeaders myInt "fruit"
+    decodeCsv NoFieldNames myInt "fruit"
     -- Err { row = 0, problem = Failure "Hey, that's not an int!" }
 
 -}
