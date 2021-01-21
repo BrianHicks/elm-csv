@@ -174,7 +174,7 @@ column col (Decoder decoder) =
 {-| Parse a value at a named column in the CSV.
 
     decodeCsv
-        FromFirstRow
+        FieldNamesFromFirstRow
         (field "Country" string)
         "Country\r\nArgentina"
     --> Ok [ "Argentina" ]
@@ -212,15 +212,16 @@ field name (Decoder decoder) =
 {-| Where do we get names for use with [`field`](#field)?
 
   - `NoFieldNames`: don't get field names at all. [`field`](#field) will always fail.
-  - `CustomFieldNames`: use the provided field names in order (so
-    `["Id", "Name"]` will mean that "Id" is in column 0 and "Name" is in column 1.)
-  - `FromFirstRow`: use the first row of the CSV as the source of field names.
+  - `CustomFieldNames`: use the provided field names in order (so `["Id", "Name"]`
+    will mean that "Id" is in column 0 and "Name" is in column 1.)
+  - `FieldNamesFromFirstRow`: use the first row of the CSV as the source of
+    field names.
 
 -}
 type FieldNames
     = NoFieldNames
     | CustomFieldNames (List String)
-    | FromFirstRow
+    | FieldNamesFromFirstRow
 
 
 getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, List (List String) )
@@ -244,7 +245,7 @@ getFieldNames headers rows =
         CustomFieldNames names ->
             Ok ( fromList names, rows )
 
-        FromFirstRow ->
+        FieldNamesFromFirstRow ->
             case rows of
                 [] ->
                     Err (DecodingError { row = 0, problem = NoFieldNamesOnFirstRow })

@@ -127,7 +127,7 @@ fieldTest =
             \_ ->
                 "Blah\u{000D}\na"
                     |> Decode.decodeCsv
-                        FromFirstRow
+                        FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
@@ -135,7 +135,7 @@ fieldTest =
             \_ ->
                 ""
                     |> Decode.decodeCsv
-                        FromFirstRow
+                        FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.NoFieldNamesOnFirstRow }))
@@ -143,7 +143,7 @@ fieldTest =
             \_ ->
                 "Bad\u{000D}\nAtlas"
                     |> Decode.decodeCsv
-                        FromFirstRow
+                        FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
@@ -151,7 +151,7 @@ fieldTest =
             \_ ->
                 "Name\u{000D}\nAtlas"
                     |> Decode.decodeCsv
-                        FromFirstRow
+                        FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Ok [ "Atlas" ])
