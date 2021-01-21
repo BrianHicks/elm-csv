@@ -131,6 +131,15 @@ float =
         )
 
 
+{-| Handle empty fields specially.
+
+    decodeCsv NoFieldNames (empty int) "\r\n1"
+    --> Ok [ Nothing, Just 1 ]
+
+    decodeCsv NoFieldNames (empty int) "not a number"
+    --> Err (DecodingError { row = 0, problem = ExpectedInt "not a number" })
+
+-}
 empty : Decoder a -> Decoder (Maybe a)
 empty decoder =
     andThen
@@ -557,6 +566,16 @@ required =
 -- FANCY DECODING
 
 
+{-| Try several possible decoders in a row, committing to the first one
+that passes.
+
+    decodeCsv NoFieldNames (oneOf (map Just int) [ succeed Nothing ]) "1"
+    --> Ok [ Just 1 ]
+
+    decodeCsv NoFieldNames (oneOf (map Just int) [ succeed Nothing ]) "a"
+    --> Ok [ Nothing ]
+
+-}
 oneOf : Decoder a -> List (Decoder a) -> Decoder a
 oneOf first rest =
     case rest of
