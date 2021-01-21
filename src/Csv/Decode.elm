@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float
     , column
-    , decodeString, Error, errorToString, Problem(..)
+    , decodeCsv, Error, errorToString, Problem(..)
     , map, map2, map3
     , succeed, fail, andThen
     )
@@ -12,7 +12,7 @@ module Csv.Decode exposing
 
 @docs column
 
-@docs decodeString, Error, errorToString, Problem
+@docs decodeCsv, decodeCustom, Error, errorToString, Problem
 
 @docs map, map2, map3
 
@@ -34,12 +34,12 @@ type Decoder a
 
 {-| Decode a string from a CSV.
 
-    decodeString string "a" --> Ok [ "a" ]
+    decodeCsv string "a" --> Ok [ "a" ]
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeString string "a,b" --> Err { row = 0, problem = AmbiguousColumn }
+    decodeCsv string "a,b" --> Err { row = 0, problem = AmbiguousColumn }
 
 -}
 string : Decoder String
@@ -49,17 +49,17 @@ string =
 
 {-| Decode an integer from a CSV.
 
-    decodeString int "1" --> Ok [ 1 ]
+    decodeCsv int "1" --> Ok [ 1 ]
 
-    decodeString int "-1" --> Ok [ -1 ]
+    decodeCsv int "-1" --> Ok [ -1 ]
 
-    decodeString int "volcano"
+    decodeCsv int "volcano"
     --> Err { row = 0, problem = ExpectedInt "volcano" }
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeString int "1,2"
+    decodeCsv int "1,2"
     --> Err { row = 0, problem = AmbiguousColumn }
 
 -}
@@ -80,17 +80,17 @@ int =
 
 {-| Decode an integer from a CSV.
 
-    decodeString float "3" --> Ok [ 3.0 ]
+    decodeCsv float "3" --> Ok [ 3.0 ]
 
-    decodeString float "3.14" --> Ok [ 3.14 ]
+    decodeCsv float "3.14" --> Ok [ 3.14 ]
 
-    decodeString float "mimesis"
+    decodeCsv float "mimesis"
     --> Err { row = 0, problem = ExpectedFloat "mimesis" }
 
 Unless you specify otherwise (e.g. with `column`) this will assume there is
 only one column in the CSV and try to decode that.
 
-    decodeString float "1.0,2.0"
+    decodeCsv float "1.0,2.0"
     --> Err { row = 0, problem = AmbiguousColumn }
 
 -}
@@ -129,11 +129,11 @@ getOnly transform row =
 
 {-| Parse a value at a given column in the CSV.
 
-    decodeString (column 0 string) "Argentina" --> Ok [ "Argentina" ]
+    decodeCsv (column 0 string) "Argentina" --> Ok [ "Argentina" ]
 
-    decodeString (column 1 int) "1,2,3"--> Ok [ 2 ]
+    decodeCsv (column 1 int) "1,2,3"--> Ok [ 2 ]
 
-    decodeString (column 100 float) "3.14"
+    decodeCsv (column 100 float) "3.14"
     --> Err { row = 0, problem = ExpectedColumn 100 }
 
 -}
@@ -156,30 +156,48 @@ column col (Decoder decoder) =
 {-| Convert a String into some type you care about using the `Decoder`s in
 this module!
 -}
-decodeString : Decoder a -> String -> Result Error (List a)
-decodeString (Decoder decode) source =
-    case Parser.parse Parser.crlfCsvConfig source of
-        Ok rows ->
-            rows
-                |> List.foldl
-                    (\row ->
-                        Result.andThen
-                            (\( soFar, rowNum ) ->
-                                case decode row of
-                                    Ok val ->
-                                        Ok ( val :: soFar, rowNum - 1 )
+decodeCsv : Decoder a -> String -> Result Error (List a)
+decodeCsv =
+    decodeCustom
+        { rowSeparator = "\u{000D}\n"
+        , fieldSeparator = ","
+        }
 
-                                    Err problem ->
-                                        Err { row = rowNum, problem = problem }
+
+decodeCustom : { rowSeparator : String, fieldSeparator : String } -> Decoder a -> String -> Result Error (List a)
+decodeCustom separators (Decoder decode) source =
+    case Parser.customConfig separators of
+        Err configProblem ->
+            -- hmm, the row # here is a little weird and not necessarily
+            -- accurate. What to do?
+            Err
+                { row = 0
+                , problem = ConfigProblem configProblem
+                }
+
+        Ok config ->
+            case Parser.parse config source of
+                Ok rows ->
+                    rows
+                        |> List.foldl
+                            (\row ->
+                                Result.andThen
+                                    (\( soFar, rowNum ) ->
+                                        case decode row of
+                                            Ok val ->
+                                                Ok ( val :: soFar, rowNum - 1 )
+
+                                            Err problem ->
+                                                Err { row = rowNum, problem = problem }
+                                    )
                             )
-                    )
-                    (Ok ( [], 0 ))
-                |> Result.map (Tuple.first >> List.reverse)
+                            (Ok ( [], 0 ))
+                        |> Result.map (Tuple.first >> List.reverse)
 
-        Err _ ->
-            -- TODO: really punting on error message quality here but we'll
-            -- get back to it!
-            Err { row = 0, problem = ParsingProblem }
+                Err _ ->
+                    -- TODO: really punting on error message quality here but we'll
+                    -- get back to it!
+                    Err { row = 0, problem = ParsingProblem }
 
 
 {-| Sometimes things go wrong. This record lets you know where exactly that
@@ -194,7 +212,8 @@ type alias Error =
 {-| What, exactly, went wrong?
 -}
 type Problem
-    = ParsingProblem
+    = ConfigProblem Parser.ConfigProblem
+    | ParsingProblem
     | ExpectedColumn Int
     | AmbiguousColumn
     | ExpectedInt String
@@ -215,9 +234,9 @@ errorToString _ =
 
 {-| Decode a value, then transform it before returning.
 
-    decodeString (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
+    decodeCsv (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
 
-    decodeString (map String.reverse string) "slap" --> Ok [ "pals" ]
+    decodeCsv (map String.reverse string) "slap" --> Ok [ "pals" ]
 
 -}
 map : (from -> to) -> Decoder from -> Decoder to
@@ -227,7 +246,7 @@ map transform (Decoder decoder) =
 
 {-| Combine two decoders to make something else, for example a record:
 
-    decodeString
+    decodeCsv
         (map2 (\id name -> { id = id, name = name })
             (column 0 int)
             (column 1 string)
@@ -299,9 +318,9 @@ you might do this:
 
 You could then use it like this:
 
-    decodeString myInt "1" -- Ok [ 1 ]
+    decodeCsv myInt "1" -- Ok [ 1 ]
 
-    decodeString myInt "fruit"
+    decodeCsv myInt "fruit"
     -- Err { row = 0, problem = Failure "Hey, that's not an int!" }
 
 -}

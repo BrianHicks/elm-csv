@@ -1,11 +1,11 @@
 module Csv.Parser exposing
-    ( Config, crlfCsvConfig, customConfig, ConfigProblem(..)
+    ( Config, customConfig, ConfigProblem(..)
     , parse, Problem(..), Context(..)
     )
 
 {-|
 
-@docs Config, crlfCsvConfig, customConfig, ConfigProblem
+@docs Config, customConfig, ConfigProblem
 
 @docs parse, Problem, Context
 
@@ -29,26 +29,6 @@ type alias InternalConfig =
 type ConfigProblem
     = NeedNonBlankRowSeparator
     | NeedNonBlankFieldSeparator
-
-
-crlfCsvConfig : Config
-crlfCsvConfig =
-    Config
-        { rowSeparator = Parser.Token "\u{000D}\n" (ExpectingRowSeparator "\u{000D}\n")
-        , newRowIndicator = '\u{000D}'
-        , fieldSeparator = Parser.Token "," (ExpectingFieldSeparator ",")
-        , newFieldIndicator = ','
-        }
-
-
-crlfTsvConfig : Config
-crlfTsvConfig =
-    Config
-        { rowSeparator = Parser.Token "\u{000D}\n" (ExpectingRowSeparator "\u{000D}\n")
-        , newRowIndicator = '\u{000D}'
-        , fieldSeparator = Parser.Token "\t" (ExpectingFieldSeparator "\t")
-        , newFieldIndicator = '\t'
-        }
 
 
 customConfig :
