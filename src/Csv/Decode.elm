@@ -81,8 +81,8 @@ column col (Decoder decoder) =
 -- RUN DECODERS
 
 
-decodeCsvString : Decoder a -> String -> Result Error (List a)
-decodeCsvString (Decoder decode) source =
+decodeString : Decoder a -> String -> Result Error (List a)
+decodeString (Decoder decode) source =
     case Parser.parse Parser.crlfCsvConfig source of
         Ok rows ->
             rows
