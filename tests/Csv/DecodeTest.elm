@@ -193,7 +193,45 @@ mapTest =
 oneOfTest : Test
 oneOfTest =
     describe "oneOf"
-        []
+        [ test "decodes a value" <|
+            \_ ->
+                "1"
+                    |> Decode.decodeCsv NoFieldNames (Decode.oneOf Decode.int [])
+                    |> Expect.equal (Ok [ 1 ])
+        , test "uses a fallback" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv NoFieldNames
+                        (Decode.oneOf
+                            (Decode.map Just Decode.int)
+                            [ Decode.succeed Nothing ]
+                        )
+                    |> Expect.equal (Ok [ Nothing ])
+        , test "gives all the errors if all the decoders fail" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv NoFieldNames
+                        (Decode.oneOf
+                            (Decode.fail "ONE")
+                            [ Decode.fail "TWO"
+                            , Decode.fail "THREE"
+                            ]
+                        )
+                    |> Expect.equal
+                        (Err
+                            (DecodingError
+                                { row = 0
+                                , problem =
+                                    Decode.ManyProblems
+                                        (Decode.Failure "ONE")
+                                        (Decode.ManyProblems
+                                            (Decode.Failure "TWO")
+                                            (Decode.Failure "THREE")
+                                        )
+                                }
+                            )
+                        )
+        ]
 
 
 succeedTest : Test

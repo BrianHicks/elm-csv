@@ -332,6 +332,7 @@ type Problem
     | ExpectedInt String
     | ExpectedFloat String
     | Failure String
+    | ManyProblems Problem Problem
 
 
 {-| Want an easier-to-read version of an `Error`? Here we are!
@@ -408,33 +409,47 @@ errorToString error =
 
         DecodingError err ->
             let
-                problemString =
-                    case err.problem of
+                problemStrings problem =
+                    case problem of
                         NoFieldNamesOnFirstRow ->
-                            "I expected to see field names on the first row, but there were none."
+                            [ "I expected to see field names on the first row, but there were none." ]
 
                         ExpectedColumn i ->
-                            "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
+                            [ "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist." ]
 
                         ExpectedField name ->
-                            "I looked for a column named `" ++ name ++ "`, but couldn't find one."
+                            [ "I looked for a column named `" ++ name ++ "`, but couldn't find one." ]
 
                         AmbiguousColumn ->
-                            "I needed there to be exactly one column."
+                            [ "I needed there to be exactly one column." ]
 
                         ExpectedInt notInt ->
-                            "I expected to parse an int from `" ++ notInt ++ "`, but couldn't."
+                            [ "I expected to parse an int from `" ++ notInt ++ "`, but couldn't." ]
 
                         ExpectedFloat notFloat ->
-                            "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't."
+                            [ "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't." ]
 
                         Failure custom ->
-                            custom
+                            [ custom ]
+
+                        ManyProblems first second ->
+                            problemStrings first ++ problemStrings second
             in
-            "There was a problem on row "
-                ++ String.fromInt err.row
-                ++ ": "
-                ++ problemString
+            case problemStrings err.problem of
+                [] ->
+                    "There was an internal error and I don't have any info about what went wrong. Please open an issue!"
+
+                [ only ] ->
+                    "There was a problem on row "
+                        ++ String.fromInt err.row
+                        ++ ": "
+                        ++ only
+
+                multi ->
+                    "There were some problems on row "
+                        ++ String.fromInt err.row
+                        ++ ":\n\n"
+                        ++ String.join "\n" (List.map (\problem -> " - " ++ problem) multi)
 
 
 
@@ -529,9 +544,31 @@ required =
 -- FANCY DECODING
 
 
-oneOf : List (Decoder a) -> Decoder a
-oneOf _ =
-    fail "TODO"
+oneOf : Decoder a -> List (Decoder a) -> Decoder a
+oneOf first rest =
+    case rest of
+        [] ->
+            first
+
+        next :: others ->
+            recover first (oneOf next others)
+
+
+recover : Decoder a -> Decoder a -> Decoder a
+recover (Decoder first) (Decoder second) =
+    Decoder <|
+        \rowAndNames ->
+            case first rowAndNames of
+                Ok value ->
+                    Ok value
+
+                Err problem ->
+                    case second rowAndNames of
+                        Ok value ->
+                            Ok value
+
+                        Err problem2 ->
+                            Err (ManyProblems problem problem2)
 
 
 {-| Always succeed, no matter what. Mostly useful with `andThen` (see that
