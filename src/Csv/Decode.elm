@@ -1,6 +1,5 @@
 module Csv.Decode exposing (..)
 
-import Array exposing (Array)
 import Csv.Parser as Parser
 import Parser.Advanced
 
@@ -10,44 +9,55 @@ import Parser.Advanced
 
 
 type Decoder a
-    = Decoder (Array String -> Result Problem a)
+    = Decoder (List String -> Result Problem a)
 
 
-string : Location -> Decoder String
-string (Location get) =
-    Decoder get
+string : Decoder String
+string =
+    Decoder (getOnly Ok)
 
 
-int : Location -> Decoder Int
-int (Location get) =
+int : Decoder Int
+int =
     Decoder
-        (get
-            >> Result.andThen
-                (\value ->
-                    case String.toInt value of
-                        Just parsed ->
-                            Ok parsed
+        (getOnly
+            (\value ->
+                case String.toInt value of
+                    Just parsed ->
+                        Ok parsed
 
-                        Nothing ->
-                            Err (ExpectedInt value)
-                )
+                    Nothing ->
+                        Err (ExpectedInt value)
+            )
         )
 
 
-float : Location -> Decoder Float
-float (Location get) =
+float : Decoder Float
+float =
     Decoder
-        (get
-            >> Result.andThen
-                (\value ->
-                    case String.toFloat value of
-                        Just parsed ->
-                            Ok parsed
+        (getOnly
+            (\value ->
+                case String.toFloat value of
+                    Just parsed ->
+                        Ok parsed
 
-                        Nothing ->
-                            Err (ExpectedFloat value)
-                )
+                    Nothing ->
+                        Err (ExpectedFloat value)
+            )
         )
+
+
+getOnly : (String -> Result Problem a) -> List String -> Result Problem a
+getOnly transform row =
+    case row of
+        [] ->
+            Err (ExpectedColumn 0)
+
+        [ only ] ->
+            transform only
+
+        _ ->
+            Err AmbiguousColumn
 
 
 
@@ -83,25 +93,18 @@ float (Location get) =
       field : String -> Decoder a -> Decoder a
       -- index
 -}
-
-
-type Location
-    = Location (Array String -> Result Problem String)
-
-
-
 -- field : String -> Location
 -- field name =
 --     LocationTODO
 
 
-column : Int -> Location
-column col =
-    Location <|
+column : Int -> Decoder a -> Decoder a
+column col (Decoder decoder) =
+    Decoder <|
         \row ->
-            case Array.get col row of
+            case row |> List.drop col |> List.head of
                 Just value ->
-                    Ok value
+                    decoder [ value ]
 
                 Nothing ->
                     Err (ExpectedColumn col)
@@ -127,10 +130,10 @@ decodeCsvString (Decoder decode) source =
         Ok rows ->
             rows
                 |> List.foldl
-                    (\next ->
+                    (\row ->
                         Result.andThen
                             (\( soFar, rowNum ) ->
-                                case decode (Array.fromList next) of
+                                case decode row of
                                     Ok val ->
                                         Ok ( val :: soFar, rowNum - 1 )
 
@@ -168,6 +171,7 @@ type alias Error =
 type Problem
     = ParsingProblem
     | ExpectedColumn Int
+    | AmbiguousColumn
     | ExpectedInt String
     | ExpectedFloat String
     | Failure String
