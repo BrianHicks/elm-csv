@@ -1,4 +1,24 @@
-module Csv.Decode exposing (..)
+module Csv.Decode exposing
+    ( Decoder, string, int, float
+    , column
+    , decodeString, Error, errorToString, Problem(..)
+    , map, map2, map3
+    , succeed, fail, andThen
+    )
+
+{-|
+
+@docs Decoder, string, int, float
+
+@docs column
+
+@docs decodeString, Error, errorToString, Problem
+
+@docs map, map2, map3
+
+@docs succeed, fail, andThen
+
+-}
 
 import Csv.Parser as Parser
 import Parser.Advanced
