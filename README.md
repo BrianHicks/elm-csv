@@ -13,12 +13,19 @@ That means you already know how to use this package.
 import Csv.Decode as Decode exposing (Decoder)
 
 
-type alias Person =
+type alias Entity =
     { id : Int
     , name : String
-    , -- cats are people too, OKAY!?
-      isACat : Bool
+    , species : String
     }
+
+
+decoder : Decoder Entity
+decoder =
+    Decode.map3 Entity
+        (Decode.field "id" Decode.int)
+        (Decode.field "name" Decode.string)
+        (Decode.field "species" Decode.string)
 
 
 {-| Some CSV you got from somewhere. A file, maybe? Or a HTTP call? Or
@@ -26,27 +33,14 @@ someone pasting it in a text box? Whatever.
 -}
 csv : String
 csv =
-    "id,name,species\r\n1,Brian,human\r\n2,Atlas,kitty cat"
+    "id,name,species\u{000D}\n1,Brian,human\u{000D}\n2,Atlas,kitty cat"
 
 
-decoder : Decoder Person
-decoder =
-    Decode.map3 Person -- pipeline syntax also available!
-        (Decode.field "id" Decode.int)
-        (Decode.field "name" Decode.string)
-        (Decode.andThen
-            (\species ->
-                case species of
-                    "kitty cat" ->
-                        Decode.succeed True
-
-                    "human" ->
-                        Decode.succeed False
-
-                    _ ->
-                        Decode.fail ("I don't know if a " ++ species ++ " is a cat.")
-            )
-        )
+Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
+--> Ok
+-->     [ { id = 1, name = "Brian", species = "human" }
+-->     , { id = 2, name = "Atlas", species = "kitty cat" }
+-->     ]
 ```
 
 ## Contributing
