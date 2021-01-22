@@ -3,50 +3,80 @@
 Decode CSV in the boringest way possible.
 Other CSV libraries have exciting, innovative APIs.
 Not this one!
-Pretend it's JSON, gimme your data, get on with your life.
-
-If you've used Elm for any amount of time, you have probably used `elm/json` to decode some value.
-Congratulations!
-That means you already know how to use this package.
+Pretend you're writing a [JSON decoder](https://package.elm-lang.org/packages/elm/json/latest/), gimme your data, get on with your life.
 
 ```elm
 import Csv.Decode as Decode exposing (Decoder)
 
 
-type alias Entity =
+type alias Pet =
     { id : Int
     , name : String
     , species : String
     }
 
 
-decoder : Decoder Entity
+decoder : Decoder Pet
 decoder =
-    Decode.map3 Entity
+    Decode.map3 Pet
         (Decode.field "id" Decode.int)
         (Decode.field "name" Decode.string)
         (Decode.field "species" Decode.string)
 
 
-{-| Some CSV you got from somewhere. A file, maybe? Or a HTTP call? Or
-someone pasting it in a text box? Whatever.
--}
 csv : String
 csv =
-    "id,name,species\u{000D}\n1,Brian,human\u{000D}\n2,Atlas,kitty cat"
+    "id,name,species\u{000D}\n1,Atlas,cat\u{000D}\n2,Pippi,dog"
 
 
 Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
 --> Ok
--->     [ { id = 1, name = "Brian", species = "human" }
--->     , { id = 2, name = "Atlas", species = "kitty cat" }
+-->     [ { id = 1, name = "Atlas", species = "cat" }
+-->     , { id = 2, name = "Pippi", species = "dog" }
+-->     ]
+```
+
+However, in an effort to avoid a common problem with `elm/json` ("how do I decode records with more than 8 fields?") this library also exposes a [pipeline-style decoder](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) for anything above 3 fields:
+
+```elm
+import Csv.Decode as Decode exposing (Decoder)
+
+
+type alias Pet =
+    { id : Int
+    , name : String
+    , species : String
+    , weight : Maybe Float
+    }
+
+
+decoder : Decoder Pet
+decoder =
+    Decode.pipeline Pet
+        |> Decode.required (Decode.field "id" Decode.int)
+        |> Decode.required (Decode.field "name" Decode.string)
+        |> Decode.required (Decode.field "species" Decode.string)
+        |> Decode.required (Decode.field "weight" (Decode.empty Decode.float))
+
+
+csv : String
+csv =
+    "id,name,species,weight\u{000D}\n1,Atlas,cat,14.5\u{000D}\n2,Pippi,dog,"
+
+
+Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
+--> Ok
+-->     [ { id = 1, name = "Atlas", species = "cat", weight = Just 14.5 }
+-->     , { id = 2, name = "Pippi", species = "dog", weight = Nothing }
 -->     ]
 ```
 
 ## Contributing
 
-This probject uses Nix to manage versions.
+This probject uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
 Install that, then run `nix-shell` to get into a development environment.
+(Or set up `direnv` and then `direnv allow`.
+Whatever!)
 
 Things I'd appreciate seeing PRs for:
 
