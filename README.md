@@ -99,7 +99,7 @@ But open an issue to talk about the API first, OK?
 
 ## Contributing
 
-This probject uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
+This project uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
 Install that, then run `nix-shell` to get into a development environment.
 
 Things I'd appreciate help with:
@@ -109,7 +109,7 @@ Things I'd appreciate help with:
 
 - Feedback on speed.
   For the data sizes I'm working with in my use of this library, speed is unlikely to be an issue.
-  If you're parsing a *lot* of data, thought, it may be for you.
+  If you're parsing a *lot* of data, though, it may be for you.
   If you find that this library has become a bottleneck in your application, please open an issue.
 
 - Feedback on decoders for things you find necessary (but please open an issue and talk through it instead of jumping straight to a PR!)

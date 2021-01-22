@@ -355,7 +355,7 @@ applyDecoder fieldNames (Decoder decode) allRows =
 
 
 {-| Sometimes things go wrong. This is how we tell you what happened. If you
-need to present this to somone, you can get a human-readable version with
+need to present this to someone, you can get a human-readable version with
 [`errorToString`](#errorToString)
 
 Some more detail:
