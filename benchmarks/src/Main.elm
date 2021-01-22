@@ -17,30 +17,45 @@ triplesCsv howManyRows =
         |> String.join "\u{000D}\n"
 
 
-naiveAgainstCsvParser : Int -> Benchmark
-naiveAgainstCsvParser howManyRows =
-    let
-        csv =
-            triplesCsv howManyRows
+naive : Benchmark
+naive =
+    [ 0, 1, 2, 4, 8 ]
+        |> List.map
+            (\size ->
+                let
+                    csv =
+                        triplesCsv size
+                in
+                ( String.fromInt size ++ " rows"
+                , \_ -> naiveParser csv
+                )
+            )
+        |> Benchmark.scale "naive"
 
+
+parser : Benchmark
+parser =
+    let
         config =
-            case
-                Parser.config
-                    { rowSeparator = "\u{000D}\n"
-                    , fieldSeparator = ","
-                    }
-            of
+            case Parser.config { rowSeparator = "\u{000D}\n", fieldSeparator = "," } of
                 Ok config_ ->
                     config_
 
-                Err problem ->
+                Err _ ->
                     crashButWithoutDependingOnDebug ()
     in
-    Benchmark.compare "naive against Csv.Parser"
-        "naive"
-        (\_ -> naiveParser csv)
-        "Csv.Parser"
-        (\_ -> Parser.parse config csv)
+    [ 0, 1, 2, 4, 8 ]
+        |> List.map
+            (\size ->
+                let
+                    csv =
+                        triplesCsv size
+                in
+                ( String.fromInt size ++ " rows"
+                , \_ -> Parser.parse config csv
+                )
+            )
+        |> Benchmark.scale "Csv.Parser"
 
 
 crashButWithoutDependingOnDebug : () -> a
@@ -50,4 +65,4 @@ crashButWithoutDependingOnDebug _ =
 
 main : BenchmarkProgram
 main =
-    program (describe "elm-csv" [ naiveAgainstCsvParser 100 ])
+    program (describe "elm-csv" [ naive, parser ])
