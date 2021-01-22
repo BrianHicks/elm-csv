@@ -26,13 +26,28 @@ If you run into trouble, this library intentionally sticks as close to [`elm/jso
 Figuring out how you'd write an equivalent JSON decoder may help!
 (But if you run into something you truly can't do, please [open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
 
+
+## Basic Decoders
+
 @docs Decoder, string, int, float, blank
+
+
+## Finding Values
 
 @docs column, field
 
+
+## Running Decoders
+
 @docs FieldNames, decodeCsv, decodeCustom, Error, errorToString, Problem
 
+
+## Transforming Values
+
 @docs map, map2, map3, pipeline, required
+
+
+## Fancy Decoding
 
 @docs oneOf, succeed, fail, andThen
 
