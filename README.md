@@ -56,7 +56,7 @@ decoder =
         |> Decode.required (Decode.field "id" Decode.int)
         |> Decode.required (Decode.field "name" Decode.string)
         |> Decode.required (Decode.field "species" Decode.string)
-        |> Decode.required (Decode.field "weight" (Decode.empty Decode.float))
+        |> Decode.required (Decode.field "weight" (Decode.blank Decode.float))
 
 
 csv : String

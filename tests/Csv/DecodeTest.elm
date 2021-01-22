@@ -77,23 +77,23 @@ floatTest =
         ]
 
 
-emptyTest : Test
-emptyTest =
-    describe "empty"
-        [ test "when the field is empty" <|
+blankTest : Test
+blankTest =
+    describe "blank"
+        [ test "when the field is blank" <|
             \_ ->
                 ""
-                    |> Decode.decodeCsv NoFieldNames (Decode.empty Decode.int)
+                    |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
                     |> Expect.equal (Ok [])
-        , test "when the field is non-empty but not valid for the decoder" <|
+        , test "when the field is non-blank but not valid for the decoder" <|
             \_ ->
                 "banana"
-                    |> Decode.decodeCsv NoFieldNames (Decode.empty Decode.int)
+                    |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
                     |> Expect.equal (Err (DecodingError { row = 0, problem = Decode.ExpectedInt "banana" }))
-        , test "when the field is non-empty and valid for the decoder" <|
+        , test "when the field is non-blank and valid for the decoder" <|
             \_ ->
                 "1"
-                    |> Decode.decodeCsv NoFieldNames (Decode.empty Decode.int)
+                    |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
                     |> Expect.equal (Ok [ Just 1 ])
         ]
 

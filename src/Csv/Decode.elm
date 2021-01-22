@@ -1,5 +1,5 @@
 module Csv.Decode exposing
-    ( Decoder, string, int, float, empty
+    ( Decoder, string, int, float, blank
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
@@ -22,7 +22,7 @@ module Csv.Decode exposing
 
 All of those functions have examples in their documentation. Check 'em out!
 
-@docs Decoder, string, int, float, empty
+@docs Decoder, string, int, float, blank
 
 @docs column, field
 
@@ -131,17 +131,17 @@ float =
         )
 
 
-{-| Handle empty fields specially.
+{-| Handle blank fields specially.
 
-    decodeCsv NoFieldNames (empty int) "\r\n1"
+    decodeCsv NoFieldNames (blank int) "\r\n1"
     --> Ok [ Nothing, Just 1 ]
 
-    decodeCsv NoFieldNames (empty int) "not a number"
+    decodeCsv NoFieldNames (blank int) "not a number"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "not a number" })
 
 -}
-empty : Decoder a -> Decoder (Maybe a)
-empty decoder =
+blank : Decoder a -> Decoder (Maybe a)
+blank decoder =
     andThen
         (\maybeBlank ->
             if String.isEmpty maybeBlank then
