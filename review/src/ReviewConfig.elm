@@ -12,7 +12,7 @@ config : List Rule
 config =
     [ NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests" ]
-    , NoImportingEverything.rule []
+    , NoImportingEverything.rule [ "Test" ]
         |> Rule.ignoreErrorsForDirectories [ "tests/VerifyExamples" ]
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
