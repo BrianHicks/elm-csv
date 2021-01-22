@@ -90,7 +90,7 @@ Usually you'll use something like [`lovasoa/elm-csv`](https://package.elm-lang.o
 Props to those authors for making their hard work available, of course, but this situation bugs me!
 I don't want to have to pick different libraries for parsing and converting.
 I just want it to work like `elm/json` where I write a decoder, give the package a string, and handle a `Result`.
-This should not be exciting, or require too much thought!
+This should not require so much thought!
 
 The second thing, and the one that prompted me to finally do something about this, is that none of the libraries available implement `andThen`.
 Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine multiple values into a single one.
