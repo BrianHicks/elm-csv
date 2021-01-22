@@ -7,3 +7,7 @@ elm-test
 
 # docs
 elm make --docs=documentation.json
+
+# linting
+elm-review src
+elm-format --validate src
