@@ -114,7 +114,7 @@ Things I'd appreciate help with:
 
 - Feedback on decoders for things you find necessary (but please open an issue and talk through it instead of jumping straight to a PR!)
   Some things I've thought of: `parse : Parser.Parser a -> Decoder a` and `json : Json.Decode.Decoder a -> Decoder a`.
-  The reason they're not in the library now is because a) `fromResult` exists to make those easier and b) I don't want to add the new dependencies on `elm/json` without a good reason.
+  The reason they're not in the library now is because a) `fromResult` exists to make those easier and b) I don't want to add new dependencies without good reason.
   If you find yourself writing things like this constantly, though, let's talk about them!
 
 Things I'd appreciate seeing PRs for, which we probably don't need to coordinate much on other than a heads-up that you're doing the work:
