@@ -74,8 +74,8 @@ type Decoder a
 
     decodeCsv NoFieldNames string "a" --> Ok [ "a" ]
 
-Unless you specify otherwise (e.g. with `column`) this will assume there is
-only one column in the CSV and try to decode that.
+Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames string "a,b"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
@@ -95,8 +95,8 @@ string =
     decodeCsv NoFieldNames int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
 
-Unless you specify otherwise (e.g. with `column`) this will assume there is
-only one column in the CSV and try to decode that.
+Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames int "1,2"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
@@ -127,8 +127,8 @@ int =
     decodeCsv NoFieldNames float "mimesis"
     --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
 
-Unless you specify otherwise (e.g. with `column`) this will assume there is
-only one column in the CSV and try to decode that.
+Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames float "1.0,2.0"
     --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
@@ -150,7 +150,7 @@ float =
         )
 
 
-{-| Handle blank fields specially.
+{-| Handle blank fields by making them into `Maybe`s.
 
     decodeCsv NoFieldNames (blank int) "\r\n1"
     --> Ok [ Nothing, Just 1 ]
@@ -187,10 +187,9 @@ getOnly transform row =
 
 
 -- LOCATIONS
--- TODO: field
 
 
-{-| Parse a value at a given column in the CSV.
+{-| Parse a value at a numbered column in the CSV, starting from 0.
 
     decodeCsv NoFieldNames (column 0 string) "Argentina" --> Ok [ "Argentina" ]
 
@@ -212,7 +211,8 @@ column col (Decoder decoder) =
                     Err (ExpectedColumn col)
 
 
-{-| Parse a value at a named column in the CSV.
+{-| Parse a value at a named column in the CSV. There are a number of ways
+to provide these names, see [`FieldNames`](#FieldNames)
 
     decodeCsv
         FieldNamesFromFirstRow
@@ -295,8 +295,8 @@ getFieldNames headers rows =
                     Ok ( fromList first, rest )
 
 
-{-| Convert a CSV string into some type you care about using the `Decoder`s
-in this module!
+{-| Convert a CSV string into some type you care about using the
+[`Decoder`](#Decoder)s in this module!
 -}
 decodeCsv : FieldNames -> Decoder a -> String -> Result Error (List a)
 decodeCsv =
@@ -307,7 +307,7 @@ decodeCsv =
 
 
 {-| Convert something shaped roughly like a CSV. For example, to decode
-tab-separated values where the row separator is just a newline character:
+tab-separated values where the row separator is a single newline character:
 
     decodeCustom
         { rowSeparator = "\n"
@@ -354,8 +354,19 @@ applyDecoder fieldNames (Decoder decode) allRows =
         (getFieldNames fieldNames allRows)
 
 
-{-| Sometimes things go wrong. This record lets you know where exactly that
-happened so you can go fix it.
+{-| Sometimes things go wrong. This is how we tell you what happened. If you
+need to present this to somone, you can get a human-readable version with
+[`errorToString`](#errorToString)
+
+Some more detail:
+
+  - `ConfigError`: `decodeCustom` got a bad separator character
+  - `ParsingError`: there was a problem parsing the data (the most common issue
+    is problems with quoted fields. Check that any quoted fields are closed
+    and that quotes are escaped by doubling.)
+  - `DecodingError`: we couldn't decode a value using the specified
+    decoder. See [`Problem`](#Problem) for more details.
+
 -}
 type Error
     = ConfigError Parser.ConfigProblem
@@ -363,7 +374,24 @@ type Error
     | DecodingError { row : Int, problem : Problem }
 
 
-{-| What, exactly, went wrong?
+{-| Things that went wrong specifically while decoding.
+
+  - `NoFieldNamesOnFirstRow`: we tried to get the field names from the first
+    row (using [`FieldNames`](#FieldNames)) but couldn't find any, probably
+    because the input was blank.
+  - `ExpectedColumn Int` and `ExpectedField String`: we looked for a value
+    at a specific column, but couldn't find it. The argument specifies where
+    we tried to look.
+  - `AmbiguousColumn`: basic decoders expect to find a single value. If there
+    are multiple fields in a row, and you don't specify which one to use with
+    [`column`](#column) or [`field`](#field), you'll get this error.
+  - `ExpectedInt String` and `ExpectedFloat String`: we tried to parse a
+    string into a number, but couldn't. The arguments specify the strings
+    we got.
+  - `Failure`: messages from [`fail`](#fail) end up here.
+  - `ManyProblems`: when there are multiple failures, messages from
+    [`oneOf`](#oneOf) end up here.
+
 -}
 type Problem
     = NoFieldNamesOnFirstRow
@@ -376,7 +404,7 @@ type Problem
     | ManyProblems Problem Problem
 
 
-{-| Want an easier-to-read version of an `Error`? Here we are!
+{-| Want an human-readable version of an [`Error`](#Error)? Here we are!
 -}
 errorToString : Error -> String
 errorToString error =
@@ -509,16 +537,15 @@ map transform (Decoder decoder) =
     Decoder (decoder >> Result.map transform)
 
 
-{-| Combine two decoders to make something else, for example a record:
+{-| Combine two decoders to make something else, for example a tuple:
 
-    decodeCsv
-        NoFieldNames
-        (map2 (\id name -> { id = id, name = name })
+    decodeCsv NoFieldNames
+        (map2 Tuple.pair
             (column 0 int)
             (column 1 string)
         )
         "1,Atlas"
-        --> Ok [ { id = 1, name = "Atlas" } ]
+        --> Ok [ (1, "Atlas") ]
 
 -}
 map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
@@ -531,7 +558,18 @@ map2 transform (Decoder decodeA) (Decoder decodeB) =
         )
 
 
-{-| Like `map2`, but with three decoders.
+{-| Like [`map2`](#map2), but with three decoders. `map4` and beyond don't
+exist in this package. Use [`pipeline`](#pipeline) to decode records instead!
+
+    decodeCsv NoFieldNames
+        (map3 (\r g b -> (r, g, b))
+            (column 0 int)
+            (column 1 int)
+            (column 2 int)
+        )
+        "255,255,0"
+        --> Ok [ (255, 255, 0) ]
+
 -}
 map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
 map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
@@ -544,9 +582,9 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
         )
 
 
-{-| Need to decode into an object? Use a pipeline instead. The way this works:
-you provide a function that takes as many arguments as you need, and then
-send it values by providing decoders.
+{-| Need to decode into an object? Use a pipeline. The way this works: you
+provide a function that takes as many arguments as you need, and then send
+it values by providing decoders.
 
     type alias Pet =
         { id : Int
@@ -585,7 +623,7 @@ required =
 -- FANCY DECODING
 
 
-{-| Try several possible decoders in a row, committing to the first one
+{-| Try several possible decoders in sequence, committing to the first one
 that passes.
 
     decodeCsv NoFieldNames (oneOf (map Just int) [ succeed Nothing ]) "1"
@@ -622,8 +660,7 @@ recover (Decoder first) (Decoder second) =
                             Err (ManyProblems problem problem2)
 
 
-{-| Always succeed, no matter what. Mostly useful with `andThen` (see that
-example.)
+{-| Always succeed, no matter what. Mostly useful with [`andThen`](#andThen).
 -}
 succeed : a -> Decoder a
 succeed value =
@@ -631,36 +668,35 @@ succeed value =
 
 
 {-| Always fail with the given message, no matter what. Mostly useful with
-`andThen` (see that example.)
+[`andThen`](#andThen).
 -}
 fail : String -> Decoder a
 fail message =
     Decoder (\_ -> Err (Failure message))
 
 
-{-| Decode some value, and then make a decoding decision based on the
-outcome. For example, if you want to parse an integer without using `int`,
-you might do this:
+{-| Decode some value _and then_ make a decoding decision based on the
+outcome. For example, if you wanted to reject negative numbers, you might
+do something like this:
 
-    myInt : Decoder Int
-    myInt =
-        string
+    positiveInt : Decoder Int
+    positiveInt =
+        int
             |> andThen
                 (\rawInt ->
-                    case String.toInt rawInt of
-                        Just parsedInt ->
-                            Decode.succeed parsedInt
+                    if rawInt < 0 then
+                        Decode.fail "Only positive numbers allowed!"
 
-                        Nothing ->
-                            Decode.fail "Hey, that's not an int!"
+                    else
+                        Decode.succeed rawInt
                 )
 
 You could then use it like this:
 
-    decodeCsv NoFieldNames myInt "1" -- Ok [ 1 ]
+    decodeCsv NoFieldNames positiveint "1" -- Ok [ 1 ]
 
-    decodeCsv NoFieldNames myInt "fruit"
-    -- Err { row = 0, problem = Failure "Hey, that's not an int!" }
+    decodeCsv NoFieldNames positiveInt "-1"
+    -- Err { row = 0, problem = Failure "Only positive numbers allowed!" }
 
 -}
 andThen : (a -> Decoder b) -> Decoder a -> Decoder b
