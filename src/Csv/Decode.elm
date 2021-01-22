@@ -324,7 +324,7 @@ tab-separated values where the row separator is a single newline character:
 -}
 decodeCustom : { rowSeparator : String, fieldSeparator : String } -> FieldNames -> Decoder a -> String -> Result Error (List a)
 decodeCustom separators fieldNames decoder source =
-    Parser.customConfig separators
+    Parser.config separators
         |> Result.mapError ConfigError
         |> Result.andThen (\config -> Parser.parse config source |> Result.mapError ParsingError)
         |> Result.andThen (applyDecoder fieldNames decoder)

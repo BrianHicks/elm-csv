@@ -1,11 +1,17 @@
 module Csv.Parser exposing
-    ( Config, customConfig, ConfigProblem(..)
+    ( Config, config, ConfigProblem(..)
     , parse
     )
 
-{-|
+{-| CSV (and TSV) parsing.
 
-@docs Config, customConfig, ConfigProblem
+
+## Configuration
+
+@docs Config, config, ConfigProblem
+
+
+## Parsing
 
 @docs parse
 
@@ -14,6 +20,8 @@ module Csv.Parser exposing
 import Parser exposing ((|.), (|=), Parser)
 
 
+{-| See [`config`](#config)
+-}
 type Config
     = Config InternalConfig
 
@@ -26,17 +34,22 @@ type alias InternalConfig =
     }
 
 
+{-| Not every string is a valid separator. This structure lets you know if
+[`config`](#config) gets something bad.
+-}
 type ConfigProblem
     = NeedNonBlankRowSeparator
     | NeedNonBlankFieldSeparator
 
 
-customConfig :
+{-| Parse a row and field separator into something [`parse`](#parse) can use.
+-}
+config :
     { rowSeparator : String
     , fieldSeparator : String
     }
     -> Result ConfigProblem Config
-customConfig separators =
+config separators =
     case ( String.uncons separators.rowSeparator, String.uncons separators.fieldSeparator ) of
         ( Just ( newRowIndicator, _ ), Just ( newFieldIndicator, _ ) ) ->
             (Ok << Config)
@@ -53,6 +66,11 @@ customConfig separators =
             Err NeedNonBlankFieldSeparator
 
 
+{-| Parse some data into a string-only list of lists. Prefer
+using `Csv.Decode.decodeCsv` or `Csv.Decode.decodeCustom`
+unless you need something unusally custom (and please [open an
+issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
+-}
 parse : Config -> String -> Result (List Parser.DeadEnd) (List (List String))
 parse (Config internalConfig) =
     Parser.run (parser internalConfig)

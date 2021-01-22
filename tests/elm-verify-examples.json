@@ -2,6 +2,7 @@
   "root": "../src",
   "tests": [
     "Csv.Decode",
+    "Csv.Parser",
     "README.md"
   ]
 }

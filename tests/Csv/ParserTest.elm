@@ -11,21 +11,21 @@ configTest =
     describe "config"
         [ test "valid config" <|
             \_ ->
-                Parser.customConfig
+                Parser.config
                     { rowSeparator = "\n"
                     , fieldSeparator = ","
                     }
                     |> Expect.ok
         , test "blank row separator" <|
             \_ ->
-                Parser.customConfig
+                Parser.config
                     { rowSeparator = ""
                     , fieldSeparator = ","
                     }
                     |> Expect.equal (Err Parser.NeedNonBlankRowSeparator)
         , test "blank field separator" <|
             \_ ->
-                Parser.customConfig
+                Parser.config
                     { rowSeparator = "\n"
                     , fieldSeparator = ""
                     }
@@ -171,7 +171,7 @@ parseTest =
 
 expectRoundTrip : { rowSeparator : String, fieldSeparator : String } -> List (List String) -> Expectation
 expectRoundTrip separators rows =
-    case Parser.customConfig separators of
+    case Parser.config separators of
         Ok config ->
             rows
                 |> List.map (String.join separators.fieldSeparator)
@@ -185,7 +185,7 @@ expectRoundTrip separators rows =
 
 unsafeCustomConfig : { rowSeparator : String, fieldSeparator : String } -> Parser.Config
 unsafeCustomConfig separators =
-    case Parser.customConfig separators of
+    case Parser.config separators of
         Ok config ->
             config
 
