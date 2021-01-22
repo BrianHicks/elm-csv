@@ -9,34 +9,27 @@ Pretend you're writing a [JSON decoder](https://package.elm-lang.org/packages/el
 import Csv.Decode as Decode exposing (Decoder)
 
 
-type alias Pet =
-    { id : Int
-    , name : String
-    , species : String
-    }
-
-
-decoder : Decoder Pet
+decoder : Decoder ( Int, Int, Int )
 decoder =
-    Decode.map3 Pet
-        (Decode.field "id" Decode.int)
-        (Decode.field "name" Decode.string)
-        (Decode.field "species" Decode.string)
+    Decode.map3 (\r g b -> ( r, g, b ))
+        (Decode.column 0 Decode.int)
+        (Decode.column 1 Decode.int)
+        (Decode.column 2 Decode.int)
 
 
 csv : String
 csv =
-    "id,name,species\u{000D}\n1,Atlas,cat\u{000D}\n2,Pippi,dog"
+    "0,128,128\r\n112,128,144"
 
 
-Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
+Decode.decodeCsv Decode.NoFieldNames decoder csv
 --> Ok
--->     [ { id = 1, name = "Atlas", species = "cat" }
--->     , { id = 2, name = "Pippi", species = "dog" }
+-->     [ ( 0, 128, 128 )
+-->     , ( 112, 128, 144 )
 -->     ]
 ```
 
-However, in an effort to avoid a common problem with `elm/json` ("how do I decode records with more than 8 fields?") this library also exposes a [pipeline-style decoder](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) for anything above 3 fields:
+However, in an effort to avoid a common problem with `elm/json` ("how do I decode records with more than 8 fields?") this library also exposes a [pipeline-style decoder](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) for records:
 
 ```elm
 import Csv.Decode as Decode exposing (Decoder)
@@ -61,7 +54,7 @@ decoder =
 
 csv : String
 csv =
-    "id,name,species,weight\u{000D}\n1,Atlas,cat,14.5\u{000D}\n2,Pippi,dog,"
+    "id,name,species,weight\r\n1,Atlas,cat,14.5\r\n2,Pippi,dog,"
 
 
 Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
