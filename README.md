@@ -93,8 +93,7 @@ I just want it to work like `elm/json` where I write a decoder, give the package
 This should not require so much thought!
 
 The second thing, and the one that prompted me to finally do something about this, is that none of the libraries available implement `andThen`.
-Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine multiple values into a single one.
-This package has it.
+Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine make decoding decisions dependent on the fields you see.
 
 ## Contributing
 
