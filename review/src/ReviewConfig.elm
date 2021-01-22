@@ -5,13 +5,15 @@ import NoImportingEverything
 import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
-import Review.Rule exposing (Rule)
+import Review.Rule as Rule exposing (Rule)
 
 
 config : List Rule
 config =
     [ NoExposingEverything.rule
+        |> Rule.ignoreErrorsForDirectories [ "tests" ]
     , NoImportingEverything.rule []
+        |> Rule.ignoreErrorsForDirectories [ "tests/VerifyExamples" ]
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule
     , NoMissingTypeExpose.rule
