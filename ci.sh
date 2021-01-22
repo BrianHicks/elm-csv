@@ -2,16 +2,23 @@
 #!nix-shell --pure -i bash
 set -euo pipefail
 
+group() {
+  echo "::group::${1:-}"
+  "${@}"
+  echo
+  echo "::endgroup::"
+}
+
 # tests
-elm-verify-examples
-elm-test
+group elm-verify-examples
+group elm-test
 
 # docs
-elm make --docs=documentation.json
+group elm make --docs=documentation.json
 
 # linting
-elm-format --validate src
+group elm-format --validate src
 
 # elm-review tries to download elm-json, and it fails in CI. We'll try again
 # in the 20.05 release of Nix, where it's packaged natively.
-# elm-review
+# group elm-review
