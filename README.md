@@ -1,8 +1,8 @@
 # elm-csv
 
 Decode CSV in the most boring way possible.
-Other CSV libraries have exciting, innovative APIs.
-Not this one!
+
+Other CSV libraries have exciting, innovative APIs... not this one!
 Pretend you're writing a [JSON decoder](https://package.elm-lang.org/packages/elm/json/latest/), gimme your data, get on with your life.
 
 ```elm
