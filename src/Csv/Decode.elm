@@ -3,7 +3,7 @@ module Csv.Decode exposing
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
-    , oneOf, succeed, fail, andThen
+    , oneOf, succeed, fail, andThen, fromResult
     )
 
 {-| Decode values from CSV. A crash course on constructing decoders:
@@ -49,7 +49,7 @@ Figuring out how you'd write an equivalent JSON decoder may help!
 
 ## Fancy Decoding
 
-@docs oneOf, succeed, fail, andThen
+@docs oneOf, succeed, fail, andThen, fromResult
 
 -}
 
@@ -715,3 +715,34 @@ andThen next (Decoder first) =
                         final row
                     )
         )
+
+
+{-| Make creating custom decoders a little easier. If you already have a
+function that parses a string into something you care about, you can probably
+provide it here and avoid having to build your own with [`andThen`](#andThen).
+
+For example, here's how you could parse a hexadecimal number with
+[`rtfeldman/elm-hex`](https://package.elm-lang.org/packages/rtfeldman/elm-hex/latest/):
+
+    import Hex
+
+    hex : Decoder Int
+    hex =
+        fromResult Hex.fromString
+
+    decodeCsv NoFieldNames hex "ff"
+    --> Ok [ 255 ]
+
+-}
+fromResult : (String -> Result String a) -> Decoder a
+fromResult convert =
+    andThen
+        (\input ->
+            case convert input of
+                Ok great ->
+                    succeed great
+
+                Err problem ->
+                    fail problem
+        )
+        string

@@ -2,6 +2,7 @@ module Csv.DecodeTest exposing (..)
 
 import Csv.Decode as Decode exposing (Decoder, Error(..), FieldNames(..))
 import Expect
+import Hex
 import Test exposing (..)
 
 
@@ -374,4 +375,27 @@ andThenTest =
                                 )
                             )
             ]
+        ]
+
+
+fromResultTest : Test
+fromResultTest =
+    describe "fromResult"
+        [ test "succeeds when the function returns Ok" <|
+            \_ ->
+                "ff"
+                    |> Decode.decodeCsv NoFieldNames (Decode.fromResult Hex.fromString)
+                    |> Expect.equal (Ok [ 255 ])
+        , test "fails when the function returns Err" <|
+            \_ ->
+                "banana"
+                    |> Decode.decodeCsv NoFieldNames (Decode.fromResult Hex.fromString)
+                    |> Expect.equal
+                        (Err
+                            (DecodingError
+                                { row = 0
+                                , problem = Decode.Failure "\"banana\" is not a valid hexadecimal string because n is not a valid hexadecimal character."
+                                }
+                            )
+                        )
         ]
