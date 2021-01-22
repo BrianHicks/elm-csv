@@ -14,7 +14,8 @@ module Csv.Decode exposing
   - To transform values in ways that can't fail, pass them to [`map`](#map). To
     transform them in ways that _can_ fail, pass decoders to
     [`andThen`](#andThen) and call [`succeed`](#succeed) or [`fail`](#fail)
-    to handle the failure gracefully.
+    to handle the failure gracefully. If you just need to lift a
+    `Result String a` into a decoder, use [`fromResult`](#fromResult)
   - To decode simple multi-field values, pass a constructor to [`map2`](#map2)
     or [`map3`](#map3).
   - For records with more than two or three values, use [`pipeline`](#pipeline)
