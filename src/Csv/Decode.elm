@@ -16,10 +16,8 @@ module Csv.Decode exposing
     [`andThen`](#andThen) and call [`succeed`](#succeed) or [`fail`](#fail)
     to handle the failure gracefully. If you just need to lift a
     `Result String a` into a decoder, use [`fromResult`](#fromResult)
-  - To decode simple multi-field values, pass a constructor to [`map2`](#map2)
-    or [`map3`](#map3).
-  - For records with more than two or three values, use [`pipeline`](#pipeline)
-    and [`required`](#required).
+  - To decode tuples, pass a constructor to [`map2`](#map2) or [`map3`](#map3).
+  - To decode records, use [`pipeline`](#pipeline) and [`required`](#required).
 
 All of those functions have examples in their documentation. Check 'em out!
 
