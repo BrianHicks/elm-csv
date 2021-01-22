@@ -5,6 +5,7 @@ import NoImportingEverything
 import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
+import NoRedundantConcat
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.CustomTypeConstructors
 import NoUnused.Dependencies
@@ -18,7 +19,8 @@ import Review.Rule as Rule exposing (Rule)
 
 config : List Rule
 config =
-    [ NoExposingEverything.rule
+    [ -- elm-review-common
+      NoExposingEverything.rule
         |> Rule.ignoreErrorsForDirectories [ "tests" ]
     , NoImportingEverything.rule [ "Test" ]
         |> Rule.ignoreErrorsForDirectories [ "tests/VerifyExamples" ]
@@ -26,7 +28,7 @@ config =
     , NoMissingTypeAnnotationInLetIn.rule
     , NoMissingTypeExpose.rule
 
-    -- unused
+    -- elm-review-unused
     , NoUnused.CustomTypeConstructors.rule []
     , NoUnused.CustomTypeConstructorArgs.rule
     , NoUnused.Dependencies.rule
@@ -35,4 +37,7 @@ config =
     , NoUnused.Parameters.rule
     , NoUnused.Patterns.rule
     , NoUnused.Variables.rule
+
+    -- elm-review-noredundantconcat
+    , NoRedundantConcat.rule
     ]
