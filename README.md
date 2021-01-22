@@ -87,7 +87,7 @@ And while I appreciate the hard work that other people have put into those, ther
 First, you need to put together multiple libraries to successfully parse CSV.
 Usually you'll use something like [`lovasoa/elm-csv`](https://package.elm-lang.org/packages/lovasoa/elm-csv/latest/) to parse into a `List (List String)`, and then something like [`ericgj/elm-csv-decode`](https://package.elm-lang.org/packages/ericgj/elm-csv-decode/latest/) to convert from a grid of strings into the values you care about.
 
-This bugs me!
+Props to those authors for making their hard work available, of course, but this situation bugs me!
 I don't want to have to pick different libraries for parsing and converting.
 I just want it to work like `elm/json` where I write a decoder, give the package a string, and handle a `Result`.
 This should not be exciting, or require too much thought!
