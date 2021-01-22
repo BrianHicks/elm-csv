@@ -36,6 +36,7 @@ configTest =
 parseTest : Test
 parseTest =
     let
+        configurations : List ( String, { rowSeparator : String, fieldSeparator : String } )
         configurations =
             [ ( "CRLF CSV"
               , { rowSeparator = "\u{000D}\n"
