@@ -71,6 +71,31 @@ Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
 -->     ]
 ```
 
+## FAQ
+
+### Can this do TSVs too?
+
+Yep!
+Use `decodeCustom`.
+It takes a field and row separator string, which can be whatever you need.
+
+### Aren't there like (*checks*) 8 other CSV libraries already?
+
+Yes, there are!
+And while I appreciate the hard work that other people have put into those, there are a couple problems:
+
+First, you need to put together multiple libraries to successfully parse CSV.
+Usually you'll use something like [`lovasoa/elm-csv`](https://package.elm-lang.org/packages/lovasoa/elm-csv/latest/) to parse into a `List (List String)`, and then something like [`ericgj/elm-csv-decode`](https://package.elm-lang.org/packages/ericgj/elm-csv-decode/latest/) to convert from a grid of strings into the values you care about.
+
+This bugs me!
+I don't want to have to pick different libraries for parsing and converting.
+I just want it to work like `elm/json` where I write a decoder, give the package a string, and handle a `Result`.
+This should not be exciting, or require too much thought!
+
+The second thing, and the one that prompted me to finally do something about this, is that none of the libraries available implement `andThen`.
+Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine multiple values into a single one.
+This package has it.
+
 ## Contributing
 
 This probject uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
@@ -78,15 +103,28 @@ Install that, then run `nix-shell` to get into a development environment.
 (Or set up `direnv` and then `direnv allow`.
 Whatever!)
 
-Things I'd appreciate seeing PRs for:
+Things I'd appreciate help with:
 
-- Adding decoders for things you find necessary when using this library (but please open an issue first so we can talk through it!)
-  Examples: `json : Json.Decode.Decoder a -> Decoder a` or `result : (String -> Result String a) -> Decoder a`.
-  I haven't written enough code using this library yet to get a sense for what's a common requirement!
+- Testing the parser on many kinds of CSV and TSV data.
+  If you find that some software produces something that this library can't handle, please open an issue with a sample!
+
+- Feedback on speed.
+  For the data sizes I'm working with in my use of this library, speed is unlikely to be an issue.
+  If you're parsing a *lot* of data, thought, it may be for you.
+  If you find that this library has become a bottleneck in your application, please open an issue.
+
+- Feedback on decoders for things you find necessary (but please open an issue and talk through it instead of jumping straight to a PR!)
+  Some things I've thought of: `parse : Parser.Parser a -> Decoder a`, `json : Json.Decode.Decoder a -> Decoder a`, `liftResult : (String -> Result String a) -> Decoder a`.
+  If you have concrete cases for any of those, let's talk about it!
+
+Things I'd appreciate seeing PRs for, which we probably don't need to coordinate much on other than a heads-up that you're doing the work:
+
 - Benchmarking and performance improvements.
-  Internally, this just uses `List` for everything.
+  Internally, we just use `List` for everything.
   Some smart application of `Array` could potentially perform a lot better, but I have held off optimizing since I haven't measured!
-- Docs, always docs.
+
+- Docs.
+  Always docs.
   Forever docs.
 
 ## Climate Action
