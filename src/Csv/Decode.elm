@@ -22,6 +22,10 @@ module Csv.Decode exposing
 
 All of those functions have examples in their documentation. Check 'em out!
 
+If you run into trouble, this library intentionally sticks as close to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and [`NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) semantics as possible.
+Figuring out how you'd write an equivalent JSON decoder may help!
+(But if you run into something you truly can't do, please [open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
+
 @docs Decoder, string, int, float, blank
 
 @docs column, field
