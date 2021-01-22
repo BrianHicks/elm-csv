@@ -268,6 +268,7 @@ type FieldNames
 getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, Int, List (List String) )
 getFieldNames headers rows =
     let
+        fromList : List String -> Dict String Int
         fromList names =
             names
                 |> List.foldl
@@ -422,7 +423,8 @@ errorToString error =
                         let
                             -- NOTE: we don't actually expect to see most of these,
                             -- but I'm going to avoid punting on making nice errors!
-                            problemString =
+                            whatHappened : String
+                            whatHappened =
                                 case deadEnd.problem of
                                     ElmParser.Expecting expecting ->
                                         "expected to see `" ++ expecting ++ "`."
@@ -471,14 +473,15 @@ errorToString error =
                             ++ ", character "
                             ++ String.fromInt deadEnd.col
                             ++ ": "
-                            ++ problemString
+                            ++ whatHappened
                     )
                 |> String.concat
                 |> (++) "There were some problems parsing the source:\n\n"
 
         DecodingError err ->
             let
-                problemStrings problem =
+                problems : Problem -> List String
+                problems problem =
                     case problem of
                         NoFieldNamesOnFirstRow ->
                             [ "I expected to see field names on the first row, but there were none." ]
@@ -502,9 +505,9 @@ errorToString error =
                             [ custom ]
 
                         ManyProblems first second ->
-                            problemStrings first ++ problemStrings second
+                            problems first ++ problems second
             in
-            case problemStrings err.problem of
+            case problems err.problem of
                 [] ->
                     "There was an internal error and I don't have any info about what went wrong. Please open an issue!"
 
