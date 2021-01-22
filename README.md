@@ -99,8 +99,6 @@ Sure, you can use a `Result` to do whatever you like, but there's not a good way
 
 This probject uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
 Install that, then run `nix-shell` to get into a development environment.
-(Or set up `direnv` and then `direnv allow`.
-Whatever!)
 
 Things I'd appreciate help with:
 
