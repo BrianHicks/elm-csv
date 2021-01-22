@@ -1,7 +1,7 @@
 {
     "type": "package",
     "name": "BrianHicks/elm-csv",
-    "summary": "Parse and decode CSV files.",
+    "summary": "Decode CSV in the most boring way possible.",
     "license": "BSD-3-Clause",
     "version": "1.0.0",
     "exposed-modules": [
