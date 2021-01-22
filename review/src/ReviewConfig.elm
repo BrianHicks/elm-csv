@@ -6,6 +6,7 @@ import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
 import NoMissingTypeExpose
 import NoRedundantConcat
+import NoRedundantCons
 import NoUnused.CustomTypeConstructorArgs
 import NoUnused.CustomTypeConstructors
 import NoUnused.Dependencies
@@ -40,4 +41,7 @@ config =
 
     -- elm-review-noredundantconcat
     , NoRedundantConcat.rule
+
+    -- elm-review-noredundantcons
+    , NoRedundantCons.rule
     ]
