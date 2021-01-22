@@ -151,7 +151,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Name" }))
         , test "fails when there is no first row" <|
             \_ ->
                 ""
@@ -167,7 +167,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Name" }))
         , test "uses the headers on the first row, if present" <|
             \_ ->
                 "Name\u{000D}\nAtlas"
@@ -176,6 +176,14 @@ fieldTest =
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Ok [ "Atlas" ])
+        , test "fails with the right line number after getting field names from the first row" <|
+            \_ ->
+                "Number\u{000D}\nnot a number"
+                    |> Decode.decodeCsv
+                        FieldNamesFromFirstRow
+                        (Decode.field "Number" Decode.int)
+                    |> Expect.equal
+                        (Err (DecodingError { row = 1, problem = Decode.ExpectedInt "not a number" }))
         ]
 
 

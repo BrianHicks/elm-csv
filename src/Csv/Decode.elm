@@ -265,7 +265,7 @@ type FieldNames
     | FieldNamesFromFirstRow
 
 
-getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, List (List String) )
+getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, Int, List (List String) )
 getFieldNames headers rows =
     let
         fromList names =
@@ -281,10 +281,10 @@ getFieldNames headers rows =
     in
     case headers of
         NoFieldNames ->
-            Ok ( Dict.empty, rows )
+            Ok ( Dict.empty, 0, rows )
 
         CustomFieldNames names ->
-            Ok ( fromList names, rows )
+            Ok ( fromList names, 0, rows )
 
         FieldNamesFromFirstRow ->
             case rows of
@@ -292,7 +292,7 @@ getFieldNames headers rows =
                     Err (DecodingError { row = 0, problem = NoFieldNamesOnFirstRow })
 
                 first :: rest ->
-                    Ok ( fromList first, rest )
+                    Ok ( fromList first, 1, rest )
 
 
 {-| Convert a CSV string into some type you care about using the
@@ -333,7 +333,7 @@ decodeCustom separators fieldNames decoder source =
 applyDecoder : FieldNames -> Decoder a -> List (List String) -> Result Error (List a)
 applyDecoder fieldNames (Decoder decode) allRows =
     Result.andThen
-        (\( names, rows ) ->
+        (\( names, firstRowNumber, rows ) ->
             rows
                 |> List.foldl
                     (\row ->
@@ -347,7 +347,7 @@ applyDecoder fieldNames (Decoder decode) allRows =
                                         Err { row = rowNum, problem = problem }
                             )
                     )
-                    (Ok ( [], 0 ))
+                    (Ok ( [], firstRowNumber ))
                 |> Result.map (Tuple.first >> List.reverse)
                 |> Result.mapError DecodingError
         )
