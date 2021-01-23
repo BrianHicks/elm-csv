@@ -97,7 +97,7 @@ parse (Config internalConfig) source =
                     else if first == internalConfig.rowFirst && String.startsWith internalConfig.rowRest rest then
                         let
                             newPos =
-                                endOffset + internalConfig.fieldLength
+                                endOffset + internalConfig.rowLength
                         in
                         parseHelp
                             rest
