@@ -6,6 +6,20 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 w/ 16GB memory) in Chrome (latest at time of writing.)
 
+## Bail Early, January 23, 2021 (1.0.1)
+
+I can get the 0 rows edge case way down by checking for that instead of using the `elm/parser` machinery.
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,099,488 | 42,873,148 | +1283.23% |
+| 1 row  | 1,766,812 |     67,496 |   -96.18% |
+| 2 rows |   967,385 |     33,915 |   -96.49% |
+| 4 rows |   531,227 |     17,209 |   -96.76% |
+| 8 rows |   285,386 |      8,491 |   -97.02% |
+
+... yeah, that works.
+
 ## Initial Measurement, January 23, 2021 (1.0.1)
 
 | Size   | Naive     | Real      | % Change |
