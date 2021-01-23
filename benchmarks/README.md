@@ -10,11 +10,11 @@ Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Inte
 
 | Size   | Naive     | Real      | % Change |
 |--------|----------:|----------:|---------:|
-| 0 rows | 3,133,535 | 2,863,423 |   -8.62% |
-| 1 row  | 1,956,732 |   101,973 |  -94.79% |
-| 2 rows | 1,116,813 |    51,576 |  -95.56% |
-| 4 rows |   623,706 |    26,050 |  -95.82% |
-| 8 rows |   330,512 |    13,279 |  -95.98% |
+| 0 rows | 2,985,148 | 2,834,003 |   -5.06% |
+| 1 row  | 1,704,020 |    64,626 |  -96.21% |
+| 2 rows |   939,422 |    32,939 |  -96.49% |
+| 4 rows |   530,027 |    16,667 |  -96.86% |
+| 8 rows |   286,299 |     8,261 |  -97.11% |
 
 So around two orders of magnitude slower across the board.
 That's where we're starting!
