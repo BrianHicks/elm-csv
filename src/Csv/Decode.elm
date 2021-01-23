@@ -369,7 +369,7 @@ Some more detail:
 -}
 type Error
     = ConfigError Parser.ConfigProblem
-    | ParsingError (List ElmParser.DeadEnd)
+    | ParsingError String
     | DecodingError { row : Int, problem : Problem }
 
 
@@ -414,67 +414,8 @@ errorToString error =
         ConfigError Parser.NeedNonBlankRowSeparator ->
             "Row separator must not be blank."
 
-        ParsingError deadEnds ->
-            deadEnds
-                |> List.map
-                    (\deadEnd ->
-                        let
-                            -- NOTE: we don't actually expect to see most of these,
-                            -- but I'm going to avoid punting on making nice errors!
-                            whatHappened : String
-                            whatHappened =
-                                case deadEnd.problem of
-                                    ElmParser.Expecting expecting ->
-                                        "expected to see `" ++ expecting ++ "`."
-
-                                    ElmParser.ExpectingInt ->
-                                        "expected to see an int."
-
-                                    ElmParser.ExpectingHex ->
-                                        "expected to see a hex number."
-
-                                    ElmParser.ExpectingOctal ->
-                                        "expected to see an octal number."
-
-                                    ElmParser.ExpectingBinary ->
-                                        "expected to see a binary number."
-
-                                    ElmParser.ExpectingFloat ->
-                                        "expected to see a floating-point number."
-
-                                    ElmParser.ExpectingNumber ->
-                                        "expected to see a number."
-
-                                    ElmParser.ExpectingVariable ->
-                                        "expected to see a variable."
-
-                                    ElmParser.ExpectingSymbol symbol ->
-                                        "expected to see a `" ++ symbol ++ "` symbol."
-
-                                    ElmParser.ExpectingKeyword keyword ->
-                                        "expected to see a `" ++ keyword ++ "` keyword."
-
-                                    ElmParser.ExpectingEnd ->
-                                        "expected the end of the input."
-
-                                    ElmParser.UnexpectedChar ->
-                                        "unexpected character."
-
-                                    ElmParser.Problem problem ->
-                                        problem
-
-                                    ElmParser.BadRepeat ->
-                                        "got a bad repeat (this is an internal problem and should be reported as a bug.)"
-                        in
-                        " - at line "
-                            ++ String.fromInt deadEnd.row
-                            ++ ", character "
-                            ++ String.fromInt deadEnd.col
-                            ++ ": "
-                            ++ whatHappened
-                    )
-                |> String.concat
-                |> (++) "There were some problems parsing the source:\n\n"
+        ParsingError problem ->
+            "There was a problem parsing the source: " ++ problem
 
         DecodingError err ->
             let
