@@ -87,10 +87,32 @@ parse (Config internalConfig) source =
                             newPos =
                                 endOffset + internalConfig.fieldLength
                         in
-                        parseHelp rest (String.slice startOffset endOffset source :: row) rows newPos newPos
+                        parseHelp
+                            rest
+                            (String.slice startOffset endOffset source :: row)
+                            rows
+                            newPos
+                            newPos
+
+                    else if first == internalConfig.rowFirst && String.startsWith internalConfig.rowRest rest then
+                        let
+                            newPos =
+                                endOffset + internalConfig.fieldLength
+                        in
+                        parseHelp
+                            rest
+                            []
+                            (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                            newPos
+                            newPos
 
                     else
-                        parseHelp rest row rows startOffset (endOffset + 1)
+                        parseHelp
+                            rest
+                            row
+                            rows
+                            startOffset
+                            (endOffset + 1)
 
                 Nothing ->
                     let
