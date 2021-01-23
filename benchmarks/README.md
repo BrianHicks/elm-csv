@@ -6,7 +6,7 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 w/ 16GB memory) in Chrome (latest at time of writing.)
 
-## January 23, 2021 (1.0.1)
+## Initial Measurement, January 23, 2021 (1.0.1)
 
 | Size   | Naive     | Real      | % Change |
 |--------|----------:|----------:|---------:|
