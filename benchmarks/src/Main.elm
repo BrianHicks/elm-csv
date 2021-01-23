@@ -12,7 +12,7 @@ naiveParser =
 
 triplesCsv : Int -> String
 triplesCsv howManyRows =
-    List.range 0 howManyRows
+    List.range 0 (howManyRows - 1)
         |> List.map (String.fromInt >> List.repeat 3 >> String.join ",")
         |> String.join "\u{000D}\n"
 
