@@ -72,8 +72,12 @@ unless you need something unusally custom (and please [open an
 issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 -}
 parse : Config -> String -> Result (List Parser.DeadEnd) (List (List String))
-parse (Config internalConfig) =
-    Parser.run (parser internalConfig)
+parse (Config internalConfig) source =
+    if String.isEmpty source then
+        Ok []
+
+    else
+        Parser.run (parser internalConfig) source
 
 
 parser : InternalConfig -> Parser (List (List String))
