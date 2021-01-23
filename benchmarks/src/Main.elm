@@ -10,31 +10,20 @@ stringSplittingParser =
     String.split "\u{000D}\n" >> List.map (String.split ",")
 
 
-triplesCsv : Int -> String
-triplesCsv howManyRows =
+encodeCsv : Int -> String
+encodeCsv howManyRows =
     List.range 0 (howManyRows - 1)
-        |> List.map (String.fromInt >> List.repeat 3 >> String.join ",")
+        |> List.map (\_ -> String.join "," (List.repeat 5 "a"))
         |> String.join "\u{000D}\n"
 
 
-stringSplitting : Benchmark
-stringSplitting =
-    [ 0, 1, 2, 4, 8 ]
-        |> List.map
-            (\size ->
-                let
-                    csv =
-                        triplesCsv size
-                in
-                ( String.fromInt size ++ " rows"
-                , \_ -> stringSplittingParser csv
-                )
-            )
-        |> Benchmark.scale "stringSplitting"
+crashButWithoutDependingOnDebug : () -> a
+crashButWithoutDependingOnDebug _ =
+    crashButWithoutDependingOnDebug ()
 
 
-parser : Benchmark
-parser =
+main : BenchmarkProgram
+main =
     let
         config =
             case Parser.config { rowSeparator = "\u{000D}\n", fieldSeparator = "," } of
@@ -49,20 +38,13 @@ parser =
             (\size ->
                 let
                     csv =
-                        triplesCsv size
+                        encodeCsv size
                 in
-                ( String.fromInt size ++ " rows"
-                , \_ -> Parser.parse config csv
-                )
+                Benchmark.compare (String.fromInt size ++ " rows")
+                    "String.split"
+                    (\_ -> stringSplittingParser csv)
+                    "Csv.Parser.parse"
+                    (\_ -> Parser.parse config csv)
             )
-        |> Benchmark.scale "Csv.Parser"
-
-
-crashButWithoutDependingOnDebug : () -> a
-crashButWithoutDependingOnDebug _ =
-    crashButWithoutDependingOnDebug ()
-
-
-main : BenchmarkProgram
-main =
-    program (describe "elm-csv" [ stringSplitting, parser ])
+        |> describe "elm-csv"
+        |> program
