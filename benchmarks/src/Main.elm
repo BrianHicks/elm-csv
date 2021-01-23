@@ -5,8 +5,8 @@ import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Parser as Parser
 
 
-naiveParser : String -> List (List String)
-naiveParser =
+stringSplittingParser : String -> List (List String)
+stringSplittingParser =
     String.split "\u{000D}\n" >> List.map (String.split ",")
 
 
@@ -17,8 +17,8 @@ triplesCsv howManyRows =
         |> String.join "\u{000D}\n"
 
 
-naive : Benchmark
-naive =
+stringSplitting : Benchmark
+stringSplitting =
     [ 0, 1, 2, 4, 8 ]
         |> List.map
             (\size ->
@@ -27,10 +27,10 @@ naive =
                         triplesCsv size
                 in
                 ( String.fromInt size ++ " rows"
-                , \_ -> naiveParser csv
+                , \_ -> stringSplittingParser csv
                 )
             )
-        |> Benchmark.scale "naive"
+        |> Benchmark.scale "stringSplitting"
 
 
 parser : Benchmark
@@ -65,4 +65,4 @@ crashButWithoutDependingOnDebug _ =
 
 main : BenchmarkProgram
 main =
-    program (describe "elm-csv" [ naive, parser ])
+    program (describe "elm-csv" [ stringSplitting, parser ])
