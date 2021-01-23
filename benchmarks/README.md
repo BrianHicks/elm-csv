@@ -6,6 +6,10 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 w/ 16GB memory) in Chrome (latest at time of writing.)
 
+## Hand-Rolled Parser, January 24, 2021 (1.0.1)
+
+I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
+
 ## Bail Early, January 23, 2021 (1.0.1)
 
 I can get the 0 rows edge case way down by checking for that instead of using the `elm/parser` machinery.
