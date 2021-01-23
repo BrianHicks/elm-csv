@@ -29,8 +29,10 @@ type Config
 type alias InternalConfig =
     { rowFirst : Char
     , rowRest : String
+    , rowLength : Int
     , fieldFirst : Char
     , fieldRest : String
+    , fieldLength : Int
     }
 
 
@@ -55,8 +57,10 @@ config separators =
             (Ok << Config)
                 { rowFirst = rowFirst
                 , rowRest = rowRest
+                , rowLength = String.length separators.rowSeparator
                 , fieldFirst = fieldFirst
                 , fieldRest = fieldRest
+                , fieldLength = String.length separators.fieldSeparator
                 }
 
         ( Nothing, _ ) ->
@@ -78,10 +82,22 @@ parse (Config internalConfig) source =
         parseHelp nextSource row rows startOffset endOffset =
             case String.uncons nextSource of
                 Just ( first, rest ) ->
-                    parseHelp rest row rows startOffset (endOffset + 1)
+                    if first == internalConfig.fieldFirst && String.startsWith internalConfig.fieldRest rest then
+                        let
+                            newPos =
+                                endOffset + internalConfig.fieldLength
+                        in
+                        parseHelp rest (String.slice startOffset endOffset source :: row) rows newPos newPos
+
+                    else
+                        parseHelp rest row rows startOffset (endOffset + 1)
 
                 Nothing ->
-                    Ok ((String.slice startOffset endOffset source :: row) :: rows)
+                    let
+                        finalRow =
+                            List.reverse (String.slice startOffset endOffset source :: row)
+                    in
+                    Ok (List.reverse (finalRow :: rows))
     in
     if String.isEmpty source then
         Ok []
