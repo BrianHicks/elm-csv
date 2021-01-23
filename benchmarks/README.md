@@ -6,12 +6,15 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 w/ 16GB memory) in Chrome (latest at time of writing.)
 
-## January 22, 2021 (1.0.1)
+## January 23, 2021 (1.0.1)
 
-| Size   | Naive     | Real    |
-|--------|-----------|---------|
-| 0 rows | 1,800,185 | 104,775 |
-| 1 row  | 1,108,333 | 53,309  |
-| 2 rows | 803,773   | 35,380  |
-| 4 rows | 505,313   | 21,408  |
-| 8 rows | 295,464   | 11,983  |
+| Size   | Naive     | Real      | % Change |
+|--------|----------:|----------:|---------:|
+| 0 rows | 3,133,535 | 2,863,423 |   -8.62% |
+| 1 row  | 1,956,732 |   101,973 |  -94.79% |
+| 2 rows | 1,116,813 |    51,576 |  -95.56% |
+| 4 rows |   623,706 |    26,050 |  -95.82% |
+| 8 rows |   330,512 |    13,279 |  -95.98% |
+
+So around two orders of magnitude slower across the board.
+That's where we're starting!
