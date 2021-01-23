@@ -80,19 +80,19 @@ parseTest =
                         \_ ->
                             expectRoundTrip config
                                 [ [ "a", "b" ] ]
+                    , test "two rows" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a" ]
+                                , [ "b" ]
+                                ]
+                    , test "two rows of two fields" <|
+                        \_ ->
+                            expectRoundTrip config
+                                [ [ "a", "b" ]
+                                , [ "c", "d" ]
+                                ]
 
-                    -- , test "two rows" <|
-                    --     \_ ->
-                    --         expectRoundTrip config
-                    --             [ [ "a" ]
-                    --             , [ "b" ]
-                    --             ]
-                    -- , test "two rows of two fields" <|
-                    --     \_ ->
-                    --         expectRoundTrip config
-                    --             [ [ "a", "b" ]
-                    --             , [ "c", "d" ]
-                    --             ]
                     -- , test "blank fields" <|
                     --     \_ ->
                     --         expectRoundTrip config
