@@ -76,7 +76,12 @@ parse (Config internalConfig) source =
     let
         parseHelp : String -> List String -> List (List String) -> Int -> Int -> Result String (List (List String))
         parseHelp nextSource row rows startOffset endOffset =
-            Err "NO"
+            case String.uncons nextSource of
+                Just ( first, rest ) ->
+                    parseHelp rest row rows startOffset (endOffset + 1)
+
+                Nothing ->
+                    Ok ((String.slice startOffset endOffset source :: row) :: rows)
     in
     if String.isEmpty source then
         Ok []
