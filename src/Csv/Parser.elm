@@ -74,48 +74,49 @@ issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 parse : Config -> String -> Result String (List (List String))
 parse (Config internalConfig) source =
     let
-        parseHelp : String -> List String -> List (List String) -> Int -> Int -> Result String (List (List String))
-        parseHelp nextSource row rows startOffset endOffset =
-            if nextSource == "" then
+        finalLength : Int
+        finalLength =
+            String.length source
+
+        parseHelp : List String -> List (List String) -> Int -> Int -> Result String (List (List String))
+        parseHelp row rows startOffset endOffset =
+            if endOffset >= finalLength then
                 let
                     finalRow =
                         List.reverse (String.slice startOffset endOffset source :: row)
                 in
                 Ok (List.reverse (finalRow :: rows))
 
-            else if String.slice 0 internalConfig.fieldLength nextSource == internalConfig.field then
+            else if String.slice endOffset (endOffset + internalConfig.fieldLength) source == internalConfig.field then
                 let
                     newPos =
                         endOffset + internalConfig.fieldLength
                 in
                 parseHelp
-                    (String.dropLeft internalConfig.fieldLength nextSource)
                     (String.slice startOffset endOffset source :: row)
                     rows
                     newPos
                     newPos
 
-            else if String.slice 0 internalConfig.rowLength nextSource == internalConfig.row then
+            else if String.slice endOffset (endOffset + internalConfig.rowLength) source == internalConfig.row then
                 let
                     newPos =
                         endOffset + internalConfig.rowLength
                 in
                 parseHelp
-                    (String.dropLeft internalConfig.rowLength nextSource)
                     []
                     (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
                     newPos
                     newPos
 
-            else if String.slice 0 1 nextSource == "\"" then
+            else if String.slice endOffset (endOffset + 1) source == "\"" then
                 -- implementing quoted fields will be A Thing, but the benchmark
                 -- shouldn't go into this branch. I'm just adding it to get a
                 -- more accurate read on where to start.
-                parseHelp nextSource row rows startOffset endOffset
+                parseHelp row rows startOffset endOffset
 
             else
                 parseHelp
-                    (String.dropLeft 1 nextSource)
                     row
                     rows
                     startOffset
@@ -125,4 +126,4 @@ parse (Config internalConfig) source =
         Ok []
 
     else
-        parseHelp source [] [] 0 0
+        parseHelp [] [] 0 0
