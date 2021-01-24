@@ -106,6 +106,13 @@ parse (Config internalConfig) source =
                             newPos
                             newPos
 
+                    else if first == quoteChar then
+                        -- implementing quoted fields will be A Thing, but
+                        -- the benchmark shouldn't go into this branch. I'm
+                        -- just adding it to get a more accurate read on where
+                        -- to start.
+                        parseHelp nextSource row rows startOffset endOffset
+
                     else
                         parseHelp
                             rest
@@ -126,3 +133,12 @@ parse (Config internalConfig) source =
 
     else
         parseHelp source [] [] 0 0
+
+
+{-| My editor has a regex bug that makes characters after '"' all render
+as quotes. This is really annoying, so into a def it goes, and down to the
+bottom of the file.
+-}
+quoteChar : Char
+quoteChar =
+    '"'
