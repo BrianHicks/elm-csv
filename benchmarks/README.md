@@ -17,6 +17,17 @@ Andrey (w0rm) pointed out that `String.uncons` is allocating a `Maybe ( Char, St
 He suggested that getting the length of the string on each iteration ([constant time](https://jsbench.me/0dkkb3th3a/1)) or simply checking prefixes ([`slice` and `startsWith` should be equivalent](https://jsbench.me/mikkb4dm2s/1)) may be faster.
 Let's try!
 
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,183,463 | 30,584,921 |  +860.74% |
+| 1 row  | 1,800,687 |    944,412 |   -44.78% |
+| 2 rows |   998,618 |    463,075 |   -53.63% |
+| 4 rows |   540,625 |    227,136 |   -57.99% |
+| 8 rows |   296,402 |    111,209 |   -62,48% |
+
+Hmm, this didn't actually make things faster!
+But I think this is required for further improvements, so I'm going to keep it (for now.)
+
 ## Hand-Rolled Parser, January 24, 2021 (1.0.1)
 
 I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
