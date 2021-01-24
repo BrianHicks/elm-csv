@@ -27,11 +27,9 @@ type Config
 
 
 type alias InternalConfig =
-    { rowFirst : Char
-    , rowRest : String
+    { row : String
     , rowLength : Int
-    , fieldFirst : Char
-    , fieldRest : String
+    , field : String
     , fieldLength : Int
     }
 
@@ -55,11 +53,9 @@ config separators =
     case ( String.uncons separators.rowSeparator, String.uncons separators.fieldSeparator ) of
         ( Just ( rowFirst, rowRest ), Just ( fieldFirst, fieldRest ) ) ->
             (Ok << Config)
-                { rowFirst = rowFirst
-                , rowRest = rowRest
+                { row = separators.rowSeparator
                 , rowLength = String.length separators.rowSeparator
-                , fieldFirst = fieldFirst
-                , fieldRest = fieldRest
+                , field = separators.fieldSeparator
                 , fieldLength = String.length separators.fieldSeparator
                 }
 
@@ -80,65 +76,53 @@ parse (Config internalConfig) source =
     let
         parseHelp : String -> List String -> List (List String) -> Int -> Int -> Result String (List (List String))
         parseHelp nextSource row rows startOffset endOffset =
-            case String.uncons nextSource of
-                Just ( first, rest ) ->
-                    if first == internalConfig.fieldFirst && String.startsWith internalConfig.fieldRest rest then
-                        let
-                            newPos =
-                                endOffset + internalConfig.fieldLength
-                        in
-                        parseHelp
-                            (String.dropLeft internalConfig.fieldLength nextSource)
-                            (String.slice startOffset endOffset source :: row)
-                            rows
-                            newPos
-                            newPos
+            if nextSource == "" then
+                let
+                    finalRow =
+                        List.reverse (String.slice startOffset endOffset source :: row)
+                in
+                Ok (List.reverse (finalRow :: rows))
 
-                    else if first == internalConfig.rowFirst && String.startsWith internalConfig.rowRest rest then
-                        let
-                            newPos =
-                                endOffset + internalConfig.rowLength
-                        in
-                        parseHelp
-                            (String.dropLeft internalConfig.rowLength nextSource)
-                            []
-                            (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                            newPos
-                            newPos
+            else if String.slice 0 internalConfig.fieldLength nextSource == internalConfig.field then
+                let
+                    newPos =
+                        endOffset + internalConfig.fieldLength
+                in
+                parseHelp
+                    (String.dropLeft internalConfig.fieldLength nextSource)
+                    (String.slice startOffset endOffset source :: row)
+                    rows
+                    newPos
+                    newPos
 
-                    else if first == quoteChar then
-                        -- implementing quoted fields will be A Thing, but
-                        -- the benchmark shouldn't go into this branch. I'm
-                        -- just adding it to get a more accurate read on where
-                        -- to start.
-                        parseHelp nextSource row rows startOffset endOffset
+            else if String.slice 0 internalConfig.rowLength nextSource == internalConfig.row then
+                let
+                    newPos =
+                        endOffset + internalConfig.rowLength
+                in
+                parseHelp
+                    (String.dropLeft internalConfig.rowLength nextSource)
+                    []
+                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                    newPos
+                    newPos
 
-                    else
-                        parseHelp
-                            rest
-                            row
-                            rows
-                            startOffset
-                            (endOffset + 1)
+            else if String.slice 0 1 nextSource == "\"" then
+                -- implementing quoted fields will be A Thing, but the benchmark
+                -- shouldn't go into this branch. I'm just adding it to get a
+                -- more accurate read on where to start.
+                parseHelp nextSource row rows startOffset endOffset
 
-                Nothing ->
-                    let
-                        finalRow =
-                            List.reverse (String.slice startOffset endOffset source :: row)
-                    in
-                    Ok (List.reverse (finalRow :: rows))
+            else
+                parseHelp
+                    (String.dropLeft 1 nextSource)
+                    row
+                    rows
+                    startOffset
+                    (endOffset + 1)
     in
     if String.isEmpty source then
         Ok []
 
     else
         parseHelp source [] [] 0 0
-
-
-{-| My editor has a regex bug that makes characters after '"' all render
-as quotes. This is really annoying, so into a def it goes, and down to the
-bottom of the file.
--}
-quoteChar : Char
-quoteChar =
-    '"'
