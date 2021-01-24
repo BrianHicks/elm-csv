@@ -6,6 +6,11 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+Ideas I haven't tried yet:
+
+- parse into an `Array String` directly
+- just pass around offsets instead of a sliced string
+
 ## Avoiding tuple allocation, January 24, 2021 (1.0.1)
 
 Andrey (w0rm) pointed out that `String.uncons` is allocating a `Maybe ( Char, String )` on every iteration.
