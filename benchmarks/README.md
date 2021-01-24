@@ -9,6 +9,8 @@ Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Inte
 ## Hand-Rolled Parser, January 24, 2021 (1.0.1)
 
 I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
+(nb. it's not done yet; I haven't done quoted values.
+However, the benchmark doesn't use quoted values and I added in a do-nothing branch so the compiled output includes the conditional check.)
 
 | Size   | Naive     | Real       | % Change  |
 |--------|----------:|-----------:|----------:|
