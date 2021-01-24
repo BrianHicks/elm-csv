@@ -22,7 +22,7 @@ However, the benchmark doesn't use quoted values and I added in a do-nothing bra
 
 Much better!
 It's not always reasonable to compare speed across revisions (that's why we test against a known target), but the naive numbers look reasonably close.
-They're mostly within a couple percent of each other (except for 8, which is ~16%,) so I'm going to compare all 1, 2, and 4:
+They're mostly within a couple percent of each other (except for 8, which is ~16%,) so I'm going to compare 1, 2, and 4:
 
 | Size   | Bail Early | Hand-Rolled | % Change  |
 |--------|-----------:|------------:|----------:|
