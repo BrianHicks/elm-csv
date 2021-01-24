@@ -38,34 +38,34 @@ parseTest =
     let
         configurations : List ( String, { rowSeparator : String, fieldSeparator : String } )
         configurations =
-            [ -- ( "CRLF CSV"
-              -- , { rowSeparator = "\u{000D}\n"
-              --   , fieldSeparator = ","
-              --   }
-              -- )
-              ( "LF-only CSV"
+            [ ( "CRLF CSV"
+              , { rowSeparator = "\u{000D}\n"
+                , fieldSeparator = ","
+                }
+              )
+            , ( "LF-only CSV"
               , { rowSeparator = "\n"
                 , fieldSeparator = ","
                 }
               )
+            , ( "CRLF TSV"
+              , { rowSeparator = "\u{000D}\n"
+                , fieldSeparator = "\t"
+                }
+              )
+            , ( "LF-only TSV"
+              , { rowSeparator = "\n"
+                , fieldSeparator = "\t"
+                }
+              )
 
-            -- , ( "CRLF TSV"
-            --   , { rowSeparator = "\u{000D}\n"
-            --     , fieldSeparator = "\t"
-            --     }
-            --   )
-            -- , ( "LF-only TSV"
-            --   , { rowSeparator = "\n"
-            --     , fieldSeparator = "\t"
-            --     }
-            --   )
             -- this one doesn't really exist in the real world, but we want to
             -- make sure that it will work if someone does need it.
-            -- , ( "LF-only Double-bar separated values"
-            --   , { rowSeparator = "\n"
-            --     , fieldSeparator = "||"
-            --     }
-            --   )
+            , ( "LF-only Double-bar separated values"
+              , { rowSeparator = "\n"
+                , fieldSeparator = "||"
+                }
+              )
             ]
     in
     configurations
