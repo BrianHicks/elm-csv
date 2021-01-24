@@ -6,6 +6,12 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+## Avoiding tuple allocation, January 24, 2021 (1.0.1)
+
+Andrey (w0rm) pointed out that `String.uncons` is allocating a `Maybe ( Char, String )` on every iteration.
+He suggested that getting the length of the string on each iteration ([constant time](https://jsbench.me/0dkkb3th3a/1)) or simply checking prefixes ([`slice` and `startsWith` should be equivalent](https://jsbench.me/mikkb4dm2s/1)) may be faster.
+Let's try!
+
 ## Hand-Rolled Parser, January 24, 2021 (1.0.1)
 
 I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
