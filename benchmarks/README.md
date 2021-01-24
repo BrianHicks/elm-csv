@@ -10,6 +10,27 @@ Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Inte
 
 I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
 
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,209,593 | 30,841,837 |  +860.93% |
+| 1 row  | 1,822,683 |  1,062,082 |   -41.73% |
+| 2 rows |   988,819 |    500,770 |   -49.36% |
+| 4 rows |   530,179 |    245,318 |   -53.73% |
+| 8 rows |   240,949 |    124,999 |   -57.04% |
+
+Much better!
+It's not always reasonable to compare speed across revisions (that's why we test against a known target), but the naive numbers look reasonably close.
+They're mostly within a couple percent of each other (except for 8, which is ~16%,) so I'm going to compare all 1, 2, and 4:
+
+| Size   | Bail Early | Hand-Rolled | % Change  |
+|--------|-----------:|------------:|----------:|
+| 1 row  |     67,496 |   1,062,082 | +1473.55% |
+| 2 rows |     33,915 |     500,770 | +1376.54% |
+| 4 rows |     17,209 |     245,318 | +1321.45% |
+
+Seems like something like a 13x speedup.
+Works for me!
+
 ## Bail Early, January 23, 2021 (1.0.1)
 
 I can get the 0 rows edge case way down by checking for that instead of using the `elm/parser` machinery.
