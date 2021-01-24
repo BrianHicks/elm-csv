@@ -88,7 +88,7 @@ parse (Config internalConfig) source =
                                 endOffset + internalConfig.fieldLength
                         in
                         parseHelp
-                            rest
+                            (String.dropLeft internalConfig.fieldLength nextSource)
                             (String.slice startOffset endOffset source :: row)
                             rows
                             newPos
@@ -100,7 +100,7 @@ parse (Config internalConfig) source =
                                 endOffset + internalConfig.rowLength
                         in
                         parseHelp
-                            rest
+                            (String.dropLeft internalConfig.rowLength nextSource)
                             []
                             (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
                             newPos
