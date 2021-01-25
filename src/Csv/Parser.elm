@@ -102,6 +102,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + 1) source == "\"" then
                 let
+                    segment : String
                     segment =
                         String.slice startOffset endOffset source
                 in
@@ -114,6 +115,7 @@ parse (Config internalConfig) source =
                 else if String.slice (endOffset + 1) (endOffset + 2) source == "\"" then
                     -- "" is a quoted ". Unescape it and keep going.
                     let
+                        newPos : Int
                         newPos =
                             endOffset + 2
                     in
@@ -132,6 +134,7 @@ parse (Config internalConfig) source =
         parseHelp row rows startOffset endOffset =
             if endOffset >= finalLength then
                 let
+                    finalRow : List String
                     finalRow =
                         List.reverse (String.slice startOffset endOffset source :: row)
                 in
@@ -139,6 +142,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + internalConfig.fieldLength) source == internalConfig.field then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + internalConfig.fieldLength
                 in
@@ -150,6 +154,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + internalConfig.rowLength) source == internalConfig.row then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + internalConfig.rowLength
                 in
@@ -161,6 +166,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + 1) source == "\"" then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + 1
                 in
@@ -202,6 +208,7 @@ parse (Config internalConfig) source =
         parseCsvHelp row rows startOffset endOffset =
             if endOffset >= finalLength then
                 let
+                    finalRow : List String
                     finalRow =
                         List.reverse (String.slice startOffset endOffset source :: row)
                 in
@@ -209,6 +216,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + 1) source == "," then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + 1
                 in
@@ -220,6 +228,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + 2) source == "\u{000D}\n" then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + 2
                 in
@@ -231,6 +240,7 @@ parse (Config internalConfig) source =
 
             else if String.slice endOffset (endOffset + 1) source == "\"" then
                 let
+                    newPos : Int
                     newPos =
                         endOffset + 1
                 in
