@@ -694,7 +694,7 @@ do something like this:
 
 You could then use it like this:
 
-    decodeCsv NoFieldNames positiveint "1" -- Ok [ 1 ]
+    decodeCsv NoFieldNames positiveInt "1" -- Ok [ 1 ]
 
     decodeCsv NoFieldNames positiveInt "-1"
     -- Err { row = 0, problem = Failure "Only positive numbers allowed!" }
