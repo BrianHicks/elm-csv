@@ -6,6 +6,22 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+## Subtraction instead of comparison, January 25, 2021 (1.0.1)
+
+If you've got integers, doing `(x - y) >= 0` is faster than `x < y` because the compiler generates literally that code instead of using a comparator function.
+(Thanks again, Andrey!)
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 2,982,748 | 18,602,065 |  +523.66% |
+| 1 row  | 1,630,630 |  1,323,911 |   -18.11% |
+| 2 rows |   905,553 |    660,299 |   -27.08% |
+| 4 rows |   498,260 |    333,485 |   -33.07% |
+| 8 rows |   266,176 |    165,825 |   -37.70% |
+
+For 8 rows: +10.54% to the new values (I changed monitor configs again between last run and now.)
+That means that 8 rows adjusted is like 183,302 times per second, a +6.13% improvement.
+
 ## Final parser speedup, January 25, 2021 (1.0.1)
 
 I think I've optimized the parser as much as I possibly can (or at least as much as I want to right now.)

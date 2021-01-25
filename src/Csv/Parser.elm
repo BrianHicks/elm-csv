@@ -94,7 +94,7 @@ parse (Config internalConfig) source =
 
         parseQuotedField : List String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
         parseQuotedField segments startOffset endOffset =
-            if endOffset >= finalLength then
+            if endOffset - finalLength >= 0 then
                 Err SourceEndedWithoutClosingQuote
 
             else if String.slice endOffset (endOffset + 1) source == "\"" then
@@ -141,7 +141,7 @@ parse (Config internalConfig) source =
 
         parseHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseHelp row rows startOffset endOffset =
-            if endOffset >= finalLength then
+            if endOffset - finalLength >= 0 then
                 let
                     finalRow : List String
                     finalRow =
@@ -208,7 +208,7 @@ parse (Config internalConfig) source =
         -}
         parseUSCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseUSCsvHelp row rows startOffset endOffset =
-            if endOffset >= finalLength then
+            if endOffset - finalLength >= 0 then
                 let
                     finalRow : List String
                     finalRow =
@@ -270,7 +270,7 @@ parse (Config internalConfig) source =
         -}
         parseEUCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseEUCsvHelp row rows startOffset endOffset =
-            if endOffset >= finalLength then
+            if endOffset - finalLength >= 0 then
                 let
                     finalRow : List String
                     finalRow =
