@@ -74,9 +74,71 @@ issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 parse : Config -> String -> Result String (List (List String))
 parse (Config internalConfig) source =
     let
+        _ =
+            Debug.log "source" ( source, finalLength )
+
         finalLength : Int
         finalLength =
             String.length source
+
+        parseQuotedField : List String -> Int -> Int -> Result String ( String, Int )
+        parseQuotedField segments startOffset endOffset =
+            let
+                _ =
+                    Debug.log "parseQuotedField" (String.left startOffset source ++ "|" ++ String.slice startOffset endOffset source ++ "|" ++ String.dropLeft endOffset source)
+            in
+            if endOffset >= finalLength then
+                Err "ran into the end of the file without finishing a quote"
+
+            else if Debug.log "+1" (String.slice endOffset (endOffset + 1) source) == "\"" then
+                let
+                    segment =
+                        String.slice startOffset endOffset source
+                            |> Debug.log "segment"
+                in
+                if Debug.log "+2 offset" (endOffset + 2) > finalLength then
+                    Ok
+                        ( List.foldl (++) "" (segment :: segments)
+                        , endOffset + 1
+                        )
+                        |> Debug.log "final because end of string"
+
+                else if Debug.log "+2" (String.slice (endOffset + 1) (endOffset + 2) source) == "\"" then
+                    -- "" is a quoted ". Unescape it and keep going.
+                    let
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseQuotedField
+                        ("\"" :: segment :: segments)
+                        newPos
+                        newPos
+                    -- else if Debug.log "+field" (String.slice (endOffset + 1) (endOffset + internalConfig.fieldLength) source) == internalConfig.field then
+                    --     let
+                    --         newPos =
+                    --             endOffset + 1 + internalConfig.fieldLength
+                    --     in
+                    --     Ok
+                    --         ( List.foldl (++) "" (segment :: segments)
+                    --         , newPos
+                    --         )
+                    --         |> Debug.log "returning"
+                    -- else if Debug.log "+row" (String.slice (endOffset + 1) (endOffset + internalConfig.rowLength) source) == internalConfig.row then
+                    --     let
+                    --         newPos =
+                    --             endOffset + 1 + internalConfig.rowLength
+                    --     in
+                    --     Ok
+                    --         ( List.foldl (++) "" (segment :: segments)
+                    --         , newPos
+                    --         )
+                    --         |> Debug.log "returning"
+
+                else
+                    Err "problem"
+
+            else
+                parseQuotedField segments startOffset (endOffset + 1)
 
         parseHelp : List String -> List (List String) -> Int -> Int -> Result String (List (List String))
         parseHelp row rows startOffset endOffset =
@@ -110,10 +172,20 @@ parse (Config internalConfig) source =
                     newPos
 
             else if String.slice endOffset (endOffset + 1) source == "\"" then
-                -- implementing quoted fields will be A Thing, but the benchmark
-                -- shouldn't go into this branch. I'm just adding it to get a
-                -- more accurate read on where to start.
-                parseHelp row rows startOffset endOffset
+                let
+                    newPos =
+                        endOffset + 1
+                in
+                case parseQuotedField [] newPos newPos of
+                    Ok ( value, afterQuotedField ) ->
+                        if afterQuotedField >= finalLength then
+                            Ok (List.reverse ((value :: row) :: rows))
+
+                        else
+                            parseHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                    Err problem ->
+                        Err problem
 
             else
                 parseHelp
