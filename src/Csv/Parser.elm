@@ -207,16 +207,9 @@ parse (Config internalConfig) source =
 
            This gives like a 20% speedup for short sources, and the speedup
            grows with the source length.
-
-           HOWEVER I recognize this optimization is specific to North
-           America. In locales that write numbers like `1000,00` instead of
-           `1000.00`, a semicolon is more common. I'm going to try and figure
-           out what locales people are using this library with and consider
-           adding more optimizations like thiis. I don't want to do that
-           prematurely, however, since we're trading code size for speed.
         -}
-        parseCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
-        parseCsvHelp row rows startOffset endOffset =
+        parseUSCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
+        parseUSCsvHelp row rows startOffset endOffset =
             if endOffset >= finalLength then
                 let
                     finalRow : List String
@@ -231,7 +224,7 @@ parse (Config internalConfig) source =
                     newPos =
                         endOffset + 1
                 in
-                parseCsvHelp
+                parseUSCsvHelp
                     (String.slice startOffset endOffset source :: row)
                     rows
                     newPos
@@ -243,7 +236,7 @@ parse (Config internalConfig) source =
                     newPos =
                         endOffset + 2
                 in
-                parseCsvHelp
+                parseUSCsvHelp
                     []
                     (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
                     newPos
@@ -261,13 +254,75 @@ parse (Config internalConfig) source =
                             Ok (List.reverse (List.reverse (value :: row) :: rows))
 
                         else
-                            parseCsvHelp (value :: row) rows afterQuotedField afterQuotedField
+                            parseUSCsvHelp (value :: row) rows afterQuotedField afterQuotedField
 
                     Err problem ->
                         Err problem
 
             else
-                parseCsvHelp
+                parseUSCsvHelp
+                    row
+                    rows
+                    startOffset
+                    (endOffset + 1)
+
+        {- See comment on `parseCsvHelp`. This does the same thing but for
+           semicolon-delimited CSVs (common in Europe because numbers are
+           written like `1.000,00` so the comma creates collisions.)
+        -}
+        parseEUCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
+        parseEUCsvHelp row rows startOffset endOffset =
+            if endOffset >= finalLength then
+                let
+                    finalRow : List String
+                    finalRow =
+                        List.reverse (String.slice startOffset endOffset source :: row)
+                in
+                Ok (List.reverse (finalRow :: rows))
+
+            else if String.slice endOffset (endOffset + 1) source == ";" then
+                let
+                    newPos : Int
+                    newPos =
+                        endOffset + 1
+                in
+                parseEUCsvHelp
+                    (String.slice startOffset endOffset source :: row)
+                    rows
+                    newPos
+                    newPos
+
+            else if String.slice endOffset (endOffset + 2) source == "\u{000D}\n" then
+                let
+                    newPos : Int
+                    newPos =
+                        endOffset + 2
+                in
+                parseEUCsvHelp
+                    []
+                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                    newPos
+                    newPos
+
+            else if String.slice endOffset (endOffset + 1) source == "\"" then
+                let
+                    newPos : Int
+                    newPos =
+                        endOffset + 1
+                in
+                case parseQuotedField [] newPos newPos of
+                    Ok ( value, afterQuotedField ) ->
+                        if afterQuotedField >= finalLength then
+                            Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                        else
+                            parseEUCsvHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                    Err problem ->
+                        Err problem
+
+            else
+                parseEUCsvHelp
                     row
                     rows
                     startOffset
@@ -277,7 +332,10 @@ parse (Config internalConfig) source =
         Ok []
 
     else if internalConfig.field == "," && internalConfig.row == "\u{000D}\n" then
-        parseCsvHelp [] [] 0 0
+        parseUSCsvHelp [] [] 0 0
+
+    else if internalConfig.field == ";" && internalConfig.row == "\u{000D}\n" then
+        parseEUCsvHelp [] [] 0 0
 
     else
         parseHelp [] [] 0 0
