@@ -17,8 +17,6 @@ module Csv.Parser exposing
 
 -}
 
-import Parser exposing ((|.), (|=), Parser)
-
 
 {-| See [`config`](#config)
 -}
