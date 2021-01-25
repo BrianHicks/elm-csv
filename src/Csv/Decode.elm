@@ -369,7 +369,7 @@ Some more detail:
 -}
 type Error
     = ConfigError Parser.ConfigProblem
-    | ParsingError String
+    | ParsingError Parser.Problem
     | DecodingError { row : Int, problem : Problem }
 
 
@@ -414,8 +414,11 @@ errorToString error =
         ConfigError Parser.NeedNonBlankRowSeparator ->
             "Row separator must not be blank."
 
-        ParsingError problem ->
-            "There was a problem parsing the source: " ++ problem
+        ParsingError Parser.SourceEndedWithoutClosingQuote ->
+            "The source ended in a quoted field without a closing quote."
+
+        ParsingError Parser.AdditionalCharactersAfterClosingQuote ->
+            "On row X, character Y in the source, there were additional characters in a field after the closing quote."
 
         DecodingError err ->
             let

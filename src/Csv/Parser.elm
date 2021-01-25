@@ -1,6 +1,6 @@
 module Csv.Parser exposing
     ( Config, config, ConfigProblem(..)
-    , parse
+    , parse, Problem(..)
     )
 
 {-| CSV (and TSV) parsing.
@@ -13,7 +13,7 @@ module Csv.Parser exposing
 
 ## Parsing
 
-@docs parse
+@docs parse, Problem
 
 -}
 
@@ -66,12 +66,19 @@ config separators =
             Err NeedNonBlankFieldSeparator
 
 
+type
+    Problem
+    -- TODO: need source location for both of these!
+    = SourceEndedWithoutClosingQuote
+    | AdditionalCharactersAfterClosingQuote
+
+
 {-| Parse some data into a string-only list of lists. Prefer
 using `Csv.Decode.decodeCsv` or `Csv.Decode.decodeCustom`
 unless you need something unusally custom (and please [open an
 issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 -}
-parse : Config -> String -> Result String (List (List String))
+parse : Config -> String -> Result Problem (List (List String))
 parse (Config internalConfig) source =
     let
         _ =
@@ -81,14 +88,14 @@ parse (Config internalConfig) source =
         finalLength =
             String.length source
 
-        parseQuotedField : List String -> Int -> Int -> Result String ( String, Int )
+        parseQuotedField : List String -> Int -> Int -> Result Problem ( String, Int )
         parseQuotedField segments startOffset endOffset =
             let
                 _ =
                     Debug.log "parseQuotedField" (String.left startOffset source ++ "|" ++ String.slice startOffset endOffset source ++ "|" ++ String.dropLeft endOffset source)
             in
             if endOffset >= finalLength then
-                Err "ran into the end of the file without finishing a quote"
+                Err SourceEndedWithoutClosingQuote
 
             else if Debug.log "+1" (String.slice endOffset (endOffset + 1) source) == "\"" then
                 let
@@ -113,34 +120,14 @@ parse (Config internalConfig) source =
                         ("\"" :: segment :: segments)
                         newPos
                         newPos
-                    -- else if Debug.log "+field" (String.slice (endOffset + 1) (endOffset + internalConfig.fieldLength) source) == internalConfig.field then
-                    --     let
-                    --         newPos =
-                    --             endOffset + 1 + internalConfig.fieldLength
-                    --     in
-                    --     Ok
-                    --         ( List.foldl (++) "" (segment :: segments)
-                    --         , newPos
-                    --         )
-                    --         |> Debug.log "returning"
-                    -- else if Debug.log "+row" (String.slice (endOffset + 1) (endOffset + internalConfig.rowLength) source) == internalConfig.row then
-                    --     let
-                    --         newPos =
-                    --             endOffset + 1 + internalConfig.rowLength
-                    --     in
-                    --     Ok
-                    --         ( List.foldl (++) "" (segment :: segments)
-                    --         , newPos
-                    --         )
-                    --         |> Debug.log "returning"
 
                 else
-                    Err "problem"
+                    Err AdditionalCharactersAfterClosingQuote
 
             else
                 parseQuotedField segments startOffset (endOffset + 1)
 
-        parseHelp : List String -> List (List String) -> Int -> Int -> Result String (List (List String))
+        parseHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseHelp row rows startOffset endOffset =
             if endOffset >= finalLength then
                 let
