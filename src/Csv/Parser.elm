@@ -291,53 +291,58 @@ parse (Config internalConfig) source =
                 in
                 Ok (List.reverse (finalRow :: rows))
 
-            else if String.slice endOffset (endOffset + 1) source == ";" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseEUCsvHelp
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + 2) source == "\u{000D}\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 2
-                in
-                parseEUCsvHelp
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + 1) source == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField [] newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseEUCsvHelp (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseEUCsvHelp
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if first == ";" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseEUCsvHelp
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseEUCsvHelp
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField [] newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseEUCsvHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseEUCsvHelp
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
     in
     if String.isEmpty source then
         Ok []
