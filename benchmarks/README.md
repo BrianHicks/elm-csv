@@ -9,7 +9,31 @@ Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Inte
 Ideas I haven't tried yet:
 
 - parse into an `Array String` directly
-- just pass around offsets instead of a sliced string
+
+## Avoiding passing next source slice, January 24, 2021 (1.0.1)
+
+We can definitely just keep the slice indexes around instead of truncating the string.
+Ok, let's slice into the full source!
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,140,522 | 29,442,281 |  +837.50% |
+| 1 row  | 1,781,778 |  1,014,435 |   -43.07% |
+| 2 rows |   993,161 |    519,795 |   -47.66% |
+| 4 rows |   543,486 |    258,108 |   -52.51% |
+| 8 rows |   290,018 |    129,659 |   -55.29% |
+
+Well, that's an improvement from before, especially in the longer strings.
+From the last time I compared benchmarks to benchmarks:
+
+| Size   | Hand-Rolled | Source Slicing | % Change  |
+|--------|------------:|---------------:|----------:|
+| 1 row  |   1,062,082 |      1,014,435 | -4.49%    |
+| 2 rows |     500,770 |        519,795 | +3.80%    |
+| 4 rows |     245,318 |        258,108 | +5.21%    |
+
+Huh!
+Not quite the slam dunk I was expecting, but the effect seems to grow with longer CSVs, so I'll take it.
 
 ## Avoiding tuple allocation, January 24, 2021 (1.0.1)
 
