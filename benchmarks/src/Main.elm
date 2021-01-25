@@ -33,7 +33,7 @@ main =
                 Err _ ->
                     crashButWithoutDependingOnDebug ()
     in
-    [ 0, 1, 2, 4, 8 ]
+    [ 0, 1, 2, 4, 8, 16 ]
         |> List.map
             (\size ->
                 let
