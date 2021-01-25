@@ -48,20 +48,19 @@ config :
     }
     -> Result ConfigProblem Config
 config separators =
-    case ( String.uncons separators.rowSeparator, String.uncons separators.fieldSeparator ) of
-        ( Just ( rowFirst, rowRest ), Just ( fieldFirst, fieldRest ) ) ->
-            (Ok << Config)
-                { row = separators.rowSeparator
-                , rowLength = String.length separators.rowSeparator
-                , field = separators.fieldSeparator
-                , fieldLength = String.length separators.fieldSeparator
-                }
+    if String.length separators.rowSeparator == 0 then
+        Err NeedNonBlankRowSeparator
 
-        ( Nothing, _ ) ->
-            Err NeedNonBlankRowSeparator
+    else if String.length separators.fieldSeparator == 0 then
+        Err NeedNonBlankFieldSeparator
 
-        ( _, Nothing ) ->
-            Err NeedNonBlankFieldSeparator
+    else
+        (Ok << Config)
+            { row = separators.rowSeparator
+            , rowLength = String.length separators.rowSeparator
+            , field = separators.fieldSeparator
+            , fieldLength = String.length separators.fieldSeparator
+            }
 
 
 {-| Something went wrong during parsing! What was it?
