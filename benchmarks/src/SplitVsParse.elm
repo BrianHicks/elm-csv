@@ -1,4 +1,4 @@
-module Main exposing (main)
+module SplitVsParse exposing (main)
 
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
