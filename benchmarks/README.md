@@ -6,6 +6,24 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+## Don't duplicate slices, January 25, 2021 (1.0.1)
+
+I was slicing off the first charcter of the string three times.
+That only needs to be done once.
+(Thanks again again, Andrey!)
+
+| Size    | Naive     | Real       | % Change  |
+|---------|----------:|-----------:|----------:|
+| 0 rows  | 3,063,892 | 19,598,562 |  +539.66% |
+| 1 row   | 1,708,921 |  1,830,877 |    +7.14% |
+| 2 rows  |   983,645 |    922,945 |    -1.67% |
+| 4 rows  |   526,378 |    465,208 |   -11.62% |
+| 8 rows  |   279,097 |    465,208 |   -17.43% |
+| 16 rows |   143,799 |    115,259 |   -19.85% |
+| 32 rows |    73,565 |     58.084 |   -21.04% |
+
+I also added a 16-row test because the function is fast enough now that doing so completes in a reasonable time, and a 32-row test just for this instance.
+
 ## Subtraction instead of comparison, January 25, 2021 (1.0.1)
 
 If you've got integers, doing `(x - y) >= 0` is faster than `x < y` because the compiler generates literally that code instead of using a comparator function.
