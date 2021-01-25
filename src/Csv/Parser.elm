@@ -129,6 +129,12 @@ parse (Config internalConfig) source =
                         , endOffset + 1 + internalConfig.fieldLength
                         )
 
+                else if String.slice (endOffset + 1) (endOffset + 1 + internalConfig.rowLength) source == internalConfig.row then
+                    Ok
+                        ( List.foldl (++) "" (segment :: segments)
+                        , endOffset + 1 + internalConfig.rowLength
+                        )
+
                 else
                     Err AdditionalCharactersAfterClosingQuote
 
