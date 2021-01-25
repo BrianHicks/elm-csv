@@ -171,9 +171,82 @@ parse (Config internalConfig) source =
                     rows
                     startOffset
                     (endOffset + 1)
+
+        {- This should be *exactly* the same as parseHelp, except it tries
+           to consistently compare slices to literals instead of looking them
+           up in `internalConfig`. Using literal values like this lets the
+           compiler optimize to a literal `===`, which is much faster than the
+           recursive compare-by-value equality call it'd generate otherwise.
+
+           This gives like a 20% speedup for short sources, and the speedup
+           grows with the source length.
+
+           HOWEVER I recognize this optimization is specific to North
+           America. In locales that write numbers like `1000,00` instead of
+           `1000.00`, a semicolon is more common. I'm going to try and figure
+           out what locales people are using this library with and consider
+           adding more optimizations like thiis. I don't want to do that
+           prematurely, however, since we're trading code size for speed.
+        -}
+        parseCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
+        parseCsvHelp row rows startOffset endOffset =
+            if endOffset >= finalLength then
+                let
+                    finalRow =
+                        List.reverse (String.slice startOffset endOffset source :: row)
+                in
+                Ok (List.reverse (finalRow :: rows))
+
+            else if String.slice endOffset (endOffset + 1) source == "," then
+                let
+                    newPos =
+                        endOffset + 1
+                in
+                parseCsvHelp
+                    (String.slice startOffset endOffset source :: row)
+                    rows
+                    newPos
+                    newPos
+
+            else if String.slice endOffset (endOffset + 2) source == "\u{000D}\n" then
+                let
+                    newPos =
+                        endOffset + 2
+                in
+                parseCsvHelp
+                    []
+                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                    newPos
+                    newPos
+
+            else if String.slice endOffset (endOffset + 1) source == "\"" then
+                let
+                    newPos =
+                        endOffset + 1
+                in
+                case parseQuotedField [] newPos newPos of
+                    Ok ( value, afterQuotedField ) ->
+                        if afterQuotedField >= finalLength then
+                            Ok (List.reverse ((value :: row) :: rows))
+
+                        else
+                            parseCsvHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                    Err problem ->
+                        Err problem
+
+            else
+                parseCsvHelp
+                    row
+                    rows
+                    startOffset
+                    (endOffset + 1)
     in
     if String.isEmpty source then
         Ok []
+
+    else if internalConfig.field == "," && internalConfig.row == "\u{000D}\n" then
+        parseCsvHelp [] [] 0 0
 
     else
         parseHelp [] [] 0 0
