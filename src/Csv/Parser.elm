@@ -26,9 +26,13 @@ type Config
 
 type alias InternalConfig =
     { row : String
+    , rowFirst : String
+    , rowRest : String
     , rowLength : Int
     , field : String
     , fieldLength : Int
+    , fieldFirst : String
+    , fieldRest : String
     }
 
 
@@ -58,8 +62,12 @@ config separators =
         (Ok << Config)
             { row = separators.rowSeparator
             , rowLength = String.length separators.rowSeparator
+            , rowFirst = String.left 1 separators.rowSeparator
+            , rowRest = String.dropLeft 1 separators.rowSeparator
             , field = separators.fieldSeparator
             , fieldLength = String.length separators.fieldSeparator
+            , fieldFirst = String.left 1 separators.fieldSeparator
+            , fieldRest = String.dropLeft 1 separators.fieldSeparator
             }
 
 
@@ -216,53 +224,58 @@ parse (Config internalConfig) source =
                 in
                 Ok (List.reverse (finalRow :: rows))
 
-            else if String.slice endOffset (endOffset + 1) source == "," then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseUSCsvHelp
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + 2) source == "\u{000D}\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 2
-                in
-                parseUSCsvHelp
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + 1) source == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField [] newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseUSCsvHelp (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseUSCsvHelp
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if first == "," then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseUSCsvHelp
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseUSCsvHelp
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField [] newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseUSCsvHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseUSCsvHelp
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
 
         {- See comment on `parseCsvHelp`. This does the same thing but for
            semicolon-delimited CSVs (common in Europe because numbers are
