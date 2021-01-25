@@ -9,6 +9,7 @@ Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Inte
 Ideas I haven't tried yet:
 
 - parse into an `Array String` directly
+- defer slicing until the decoding step
 
 ## Avoiding passing next source slice, January 24, 2021 (1.0.1)
 
