@@ -150,6 +150,11 @@ parseTest =
                                 "\"\"\"\""
                                     |> parse (unsafeCustomConfig config)
                                     |> Expect.equal (Ok [ [ "\"" ] ])
+                        , test "two quoted values in a row" <|
+                            \_ ->
+                                ("\"a\"" ++ config.fieldSeparator ++ "\"b\"")
+                                    |> parse (unsafeCustomConfig config)
+                                    |> Expect.equal (Ok [ [ "a", "b" ] ])
                         , describe "errors"
                             [ test "not ending a quoted value is an error" <|
                                 \_ ->

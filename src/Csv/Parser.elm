@@ -123,6 +123,12 @@ parse (Config internalConfig) source =
                         newPos
                         newPos
 
+                else if String.slice (endOffset + 1) (endOffset + 1 + internalConfig.fieldLength) source == internalConfig.field then
+                    Ok
+                        ( List.foldl (++) "" (segment :: segments)
+                        , endOffset + 1 + internalConfig.fieldLength
+                        )
+
                 else
                     Err AdditionalCharactersAfterClosingQuote
 
@@ -172,7 +178,7 @@ parse (Config internalConfig) source =
                 case parseQuotedField [] newPos newPos of
                     Ok ( value, afterQuotedField ) ->
                         if afterQuotedField >= finalLength then
-                            Ok (List.reverse ((value :: row) :: rows))
+                            Ok (List.reverse (List.reverse (value :: row) :: rows))
 
                         else
                             parseHelp (value :: row) rows afterQuotedField afterQuotedField
@@ -246,7 +252,7 @@ parse (Config internalConfig) source =
                 case parseQuotedField [] newPos newPos of
                     Ok ( value, afterQuotedField ) ->
                         if afterQuotedField >= finalLength then
-                            Ok (List.reverse ((value :: row) :: rows))
+                            Ok (List.reverse (List.reverse (value :: row) :: rows))
 
                         else
                             parseCsvHelp (value :: row) rows afterQuotedField afterQuotedField
