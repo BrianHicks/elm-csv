@@ -41,6 +41,13 @@ Let's make that percentage adjustment using the naive implementation and see whe
 
 So I'm going to claim it's **19x faster**, since most CSVs I've worked with are 8 rows or longer.
 
+What's that mean in characters per second?
+The benchmark has five fields per row, plus four commas, and a `\r\n` on every line except the end: `rows * 31 - 2`.
+For the benchmark with 8 rows, that's 246 characters.
+
+So previously, we could process that 8,261 times per second, or 2,032,206 characters per second.
+Now we can do it 165,880 (adjusted) times per second, or 40,806,480 characters per second!
+
 ## Inline "," and "\r\n", January 25, 2021 (1.0.1)
 
 I'm going to copy the whole parser function and make a version that tests literals instead of references.
