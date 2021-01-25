@@ -10,6 +10,26 @@ Ideas:
 
 - make a specialized parser comparing with literal `,` and `\r\n` to get the compiler to use JS equality on the literals
 
+## Re-baseline once quoted field parser is finished, January 25, 2021 (1.0.1)
+
+I finished the quoted field parser.
+It shouldn't have slowed down *too* much (it's doing the same comparison as before.)
+But let's see:
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,171,828 | 20,880,023 |  +558.30% |
+| 1 row  | 1,714,612 |  1,062,197 |   -38.05% |
+| 2 rows |   944,000 |    524,645 |   -44.45% |
+| 4 rows |   524,009 |    264,076 |   -49.60% |
+| 8 rows |   278,901 |    132,918 |   -52.34% |
+
+There's some weird noise here: the 0 row benchmark went down by a lot.
+I tried quieting my computer down (had some additional chat apps open and a different monitor configuration) but the difference persists.
+
+I don't see a big difference in the generated code, so I think this might be a fluke.
+Everything seems to be within a couple percentage points of where I want it to be, so I'm going to move ahead.
+
 ## Defer slicing until the decoding step, January 25, 2021 (1.0.1)
 
 We won't necessarily use all the fields we parse, so we can just keep track of offsets instead of slicing directly.
