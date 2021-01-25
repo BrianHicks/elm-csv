@@ -6,9 +6,33 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
-Ideas I haven't tried yet:
+## Defer slicing until the decoding step, January 25, 2021 (1.0.1)
 
-- defer slicing until the decoding step
+We won't necessarily use all the fields we parse, so we can just keep track of offsets instead of slicing directly.
+This will cause a little issue for quoted strings, but we could get around it by returning `(Int, Int, Bool)` where the bool indicates whether the field is quoted or not and replacing `""` with `"` after slicing if it is.
+
+Anyway, benchmarks:
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,154,649 | 29,144,858 |  +823.87% |
+| 1 row  | 1,808,216 |  1,175,177 |   -35.01% |
+| 2 rows |   997,407 |    576,939 |   -42.16% |
+| 4 rows |   553,081 |    288,789 |   -47.79% |
+| 8 rows |   290,929 |    142,389 |   -51.06% |
+
+Let's see how that changed:
+
+| Size   | Source Slicing | Int Tuples | % Change  |
+|--------|---------------:|-----------:|----------:|
+| 1 row  |      1,014,435 |  1,175,177 |   +15.85% |
+| 2 rows |        519,795 |    576,939 |   +10.99% |
+| 4 rows |        258,108 |    288,789 |   +11.89% |
+
+Hmm!
+That's nothing to scoff at, but there's the complication above.
+And another thing, I bet people use all of the fields most of the time, so this may actually be adding allocations that we wouldn't have to be doing, just moving the string slicing to the decoder.
+For both reasons, I'm going to back this change out, finish the quoting implementation, and then benchmark decoding.
 
 ## Sidebar: is it faster to cons onto a list, append to an array, or assign into an array with preallocated size?
 
