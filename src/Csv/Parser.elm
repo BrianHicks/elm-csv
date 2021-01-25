@@ -159,6 +159,7 @@ parse (Config internalConfig) source =
 
             else
                 let
+                    first : String
                     first =
                         String.slice endOffset (endOffset + 1) source
                 in
@@ -231,6 +232,7 @@ parse (Config internalConfig) source =
 
             else
                 let
+                    first : String
                     first =
                         String.slice endOffset (endOffset + 1) source
                 in
@@ -298,6 +300,7 @@ parse (Config internalConfig) source =
 
             else
                 let
+                    first : String
                     first =
                         String.slice endOffset (endOffset + 1) source
                 in
