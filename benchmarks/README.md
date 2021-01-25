@@ -21,14 +21,6 @@ Let's get a final number to see how far we've come:
 | 4 rows |   551,327 |    341,781 |   -38.01% |
 | 8 rows |   297,552 |    172,720 |   -41.95% |
 
-| Size   | Naive     | Real      | % Change |
-|--------|----------:|----------:|---------:|
-| 0 rows | 2,985,148 | 2,834,003 |   -5.06% |
-| 1 row  | 1,704,020 |    64,626 |  -96.21% |
-| 2 rows |   939,422 |    32,939 |  -96.49% |
-| 4 rows |   530,027 |    16,667 |  -96.86% |
-| 8 rows |   286,299 |     8,261 |  -97.11% |
-
 We were down like 100% before, so this is a big improvement!
 Let's make that percentage adjustment using the naive implementation and see where we're at:
 
