@@ -43,29 +43,29 @@ parseTest =
                 , fieldSeparator = ","
                 }
               )
-            , ( "LF-only CSV"
-              , { rowSeparator = "\n"
-                , fieldSeparator = ","
-                }
-              )
-            , ( "CRLF TSV"
-              , { rowSeparator = "\u{000D}\n"
-                , fieldSeparator = "\t"
-                }
-              )
-            , ( "LF-only TSV"
-              , { rowSeparator = "\n"
-                , fieldSeparator = "\t"
-                }
-              )
 
+            -- , ( "LF-only CSV"
+            --   , { rowSeparator = "\n"
+            --     , fieldSeparator = ","
+            --     }
+            --   )
+            -- , ( "CRLF TSV"
+            --   , { rowSeparator = "\u{000D}\n"
+            --     , fieldSeparator = "\t"
+            --     }
+            --   )
+            -- , ( "LF-only TSV"
+            --   , { rowSeparator = "\n"
+            --     , fieldSeparator = "\t"
+            --     }
+            --   )
             -- this one doesn't really exist in the real world, but we want to
             -- make sure that it will work if someone does need it.
-            , ( "LF-only Double-bar separated values"
-              , { rowSeparator = "\n"
-                , fieldSeparator = "||"
-                }
-              )
+            -- , ( "LF-only Double-bar separated values"
+            --   , { rowSeparator = "\n"
+            --     , fieldSeparator = "||"
+            --     }
+            --   )
             ]
     in
     configurations
@@ -130,46 +130,39 @@ parseTest =
                                     String.fromList [ first ]
                                         |> parse (unsafeCustomConfig config)
                                         |> Expect.equal (Ok [ [ String.fromList [ first ] ] ])
-
-                    -- , describe "quoted values"
-                    --     [ test "quoted single values" <|
-                    --         \_ ->
-                    --             "\"a\""
-                    --                 |> parse (unsafeCustomConfig config)
-                    --                 |> Expect.equal (Ok [ [ "a" ] ])
-                    --     , test "quoted row separators" <|
-                    --         \_ ->
-                    --             ("\"" ++ config.rowSeparator ++ "\"")
-                    --                 |> parse (unsafeCustomConfig config)
-                    --                 |> Expect.equal (Ok [ [ config.rowSeparator ] ])
-                    --     , test "quoted field separators" <|
-                    --         \_ ->
-                    --             ("\"" ++ config.fieldSeparator ++ "\"")
-                    --                 |> parse (unsafeCustomConfig config)
-                    --                 |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
-                    --     , test "quoted quotes" <|
-                    --         \_ ->
-                    --             "\"\"\"\""
-                    --                 |> parse (unsafeCustomConfig config)
-                    --                 |> Expect.equal (Ok [ [ "\"" ] ])
-                    --     , describe "errors"
-                    --         [ test "not ending a quoted value is an error" <|
-                    --             \_ ->
-                    --                 "\"a"
-                    --                     |> parse (unsafeCustomConfig config)
-                    --                     |> Expect.equal
-                    --                         (Err
-                    --                             [ { row = 1, col = 2, problem = ElmParser.Expecting "\"\"" }
-                    --                             , { row = 1, col = 2, problem = ElmParser.Expecting "\"" }
-                    --                             , { row = 1, col = 3, problem = ElmParser.Expecting "\"" }
-                    --                             ]
-                    --                         )
-                    --         ]
-                    --     ]
+                    , only <|
+                        describe "quoted values"
+                            [ test "quoted single values" <|
+                                \_ ->
+                                    "\"a\""
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal (Ok [ [ "a" ] ])
+                            , test "quoted row separators" <|
+                                \_ ->
+                                    ("\"" ++ config.rowSeparator ++ "\"")
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal (Ok [ [ config.rowSeparator ] ])
+                            , test "quoted field separators" <|
+                                \_ ->
+                                    ("\"" ++ config.fieldSeparator ++ "\"")
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal (Ok [ [ config.fieldSeparator ] ])
+                            , test "quoted quotes" <|
+                                \_ ->
+                                    "\"\"\"\""
+                                        |> parse (unsafeCustomConfig config)
+                                        |> Expect.equal (Ok [ [ "\"" ] ])
+                            , describe "errors"
+                                [ test "not ending a quoted value is an error" <|
+                                    \_ ->
+                                        "\"a"
+                                            |> parse (unsafeCustomConfig config)
+                                            |> Expect.err
+                                ]
+                            ]
                     ]
             )
         |> describe "parse"
-        |> only
 
 
 expectRoundTrip : { rowSeparator : String, fieldSeparator : String } -> List (List String) -> Expectation
