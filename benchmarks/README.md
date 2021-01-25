@@ -46,9 +46,9 @@ From the last time I compared benchmarks to benchmarks:
 
 | Size   | Hand-Rolled | Source Slicing | % Change  |
 |--------|------------:|---------------:|----------:|
-| 1 row  |   1,062,082 |      1,014,435 | -4.49%    |
-| 2 rows |     500,770 |        519,795 | +3.80%    |
-| 4 rows |     245,318 |        258,108 | +5.21%    |
+| 1 row  |   1,062,082 |      1,014,435 |    -4.49% |
+| 2 rows |     500,770 |        519,795 |    +3.80% |
+| 4 rows |     245,318 |        258,108 |    +5.21% |
 
 Huh!
 Not quite the slam dunk I was expecting, but the effect seems to grow with longer CSVs, so I'll take it.
