@@ -10,6 +10,31 @@ Ideas:
 
 - make a specialized parser comparing with literal `,` and `\r\n` to get the compiler to use JS equality on the literals
 
+## Inline "," and "\r\n", January 25, 2021 (1.0.1)
+
+I'm going to copy the whole parser function and make a version that tests literals instead of references.
+That should make the compiler use direct JS `===` instead of `_Utils_eq`.
+Maybe it makes things faster, at the cost of more generated code?
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,152,392 | 20,269,870 |  +543.00% |
+| 1 row  | 1,818,376 |  1,327,727 |   -26.98% |
+| 2 rows | 1,003,826 |    678,638 |   -32.39% |
+| 4 rows |   552,580 |    342,057 |   -38.10% |
+| 8 rows |   293,287 |    175,085 |   -40.30% |
+
+Looks like the naive implementation differs more than I'd like (~6%, vs ~2% before) so I'm going to adjust the new numbers down by the percentage the naive numbers differ to arrive at a conclusion:
+
+| Size   | Baseline  | Inline    | Adjustment | Inline, Adjusted | % Change |
+|--------|----------:|----------:|-----------:|-----------------:|---------:|
+| 1 row  | 1,062,197 | 1,327,727 |     -6.05% |        1,247,399 |  +17.44% |
+| 2 rows |   524,645 |   678,638 |     -6.35% |          635,544 |  +21.14% |
+| 4 rows |   264,076 |   342,057 |     -5.45% |          323,415 |  +22.47% |
+| 8 rows |   132,918 |   175,085 |     -5.16% |          166,050 |  +24.93% |
+
+Ok, wow, that's probably worth keeping!
+
 ## Re-baseline once quoted field parser is finished, January 25, 2021 (1.0.1)
 
 I finished the quoted field parser.
