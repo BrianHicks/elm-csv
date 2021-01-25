@@ -52,9 +52,9 @@ main =
                         encodeJson size
                 in
                 Benchmark.compare (String.fromInt size ++ " rows")
-                    "Json.Decode.fromString"
+                    ("Json.Decode.fromString" ++ " (" ++ String.fromInt (String.length json) ++ " bytes)")
                     (\_ -> Decode.decodeString Decode.value csv)
-                    "Csv.Parser.parse"
+                    ("Csv.Parser.parse" ++ " (" ++ String.fromInt (String.length csv) ++ " bytes)")
                     (\_ -> Parser.parse config csv)
             )
         |> describe "elm-csv"
