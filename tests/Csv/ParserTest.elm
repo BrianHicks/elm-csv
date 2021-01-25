@@ -37,9 +37,14 @@ parseTest =
     let
         configurations : List ( String, { rowSeparator : String, fieldSeparator : String } )
         configurations =
-            [ ( "CRLF CSV"
+            [ ( "CRLF CSV (US locale)"
               , { rowSeparator = "\u{000D}\n"
                 , fieldSeparator = ","
+                }
+              )
+            , ( "CRLF CSV (EU locale, semicolon)"
+              , { rowSeparator = "\u{000D}\n"
+                , fieldSeparator = ";"
                 }
               )
             , ( "LF-only CSV"
