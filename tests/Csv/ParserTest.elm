@@ -2,7 +2,6 @@ module Csv.ParserTest exposing (..)
 
 import Csv.Parser as Parser exposing (parse)
 import Expect exposing (Expectation)
-import Parser as ElmParser
 import Test exposing (..)
 
 
