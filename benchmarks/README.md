@@ -6,6 +6,10 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+Ideas:
+
+- make a specialized parser comparing with literal `,` and `\r\n` to get the compiler to use JS equality on the literals
+
 ## Defer slicing until the decoding step, January 25, 2021 (1.0.1)
 
 We won't necessarily use all the fields we parse, so we can just keep track of offsets instead of slicing directly.
