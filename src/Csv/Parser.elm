@@ -157,53 +157,58 @@ parse (Config internalConfig) source =
                 in
                 Ok (List.reverse (finalRow :: rows))
 
-            else if String.slice endOffset (endOffset + internalConfig.fieldLength) source == internalConfig.field then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + internalConfig.fieldLength
-                in
-                parseHelp
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + internalConfig.rowLength) source == internalConfig.row then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + internalConfig.rowLength
-                in
-                parseHelp
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if String.slice endOffset (endOffset + 1) source == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField [] newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseHelp (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseHelp
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if first == internalConfig.fieldFirst && String.slice (endOffset + 1) (endOffset + internalConfig.fieldLength) source == internalConfig.fieldRest then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + internalConfig.fieldLength
+                    in
+                    parseHelp
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == internalConfig.rowFirst && String.slice (endOffset + 1) (endOffset + internalConfig.rowLength) source == internalConfig.rowRest then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + internalConfig.rowLength
+                    in
+                    parseHelp
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField [] newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseHelp (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseHelp
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
 
         {- This should be *exactly* the same as parseHelp, except it tries
            to consistently compare slices to literals instead of looking them
