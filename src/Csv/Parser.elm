@@ -81,36 +81,27 @@ issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 parse : Config -> String -> Result Problem (List (List String))
 parse (Config internalConfig) source =
     let
-        _ =
-            Debug.log "source" ( source, finalLength )
-
         finalLength : Int
         finalLength =
             String.length source
 
         parseQuotedField : List String -> Int -> Int -> Result Problem ( String, Int )
         parseQuotedField segments startOffset endOffset =
-            let
-                _ =
-                    Debug.log "parseQuotedField" (String.left startOffset source ++ "|" ++ String.slice startOffset endOffset source ++ "|" ++ String.dropLeft endOffset source)
-            in
             if endOffset >= finalLength then
                 Err SourceEndedWithoutClosingQuote
 
-            else if Debug.log "+1" (String.slice endOffset (endOffset + 1) source) == "\"" then
+            else if String.slice endOffset (endOffset + 1) source == "\"" then
                 let
                     segment =
                         String.slice startOffset endOffset source
-                            |> Debug.log "segment"
                 in
-                if Debug.log "+2 offset" (endOffset + 2) > finalLength then
+                if (endOffset + 2) > finalLength then
                     Ok
                         ( List.foldl (++) "" (segment :: segments)
                         , endOffset + 1
                         )
-                        |> Debug.log "final because end of string"
 
-                else if Debug.log "+2" (String.slice (endOffset + 1) (endOffset + 2) source) == "\"" then
+                else if String.slice (endOffset + 1) (endOffset + 2) source == "\"" then
                     -- "" is a quoted ". Unescape it and keep going.
                     let
                         newPos =
