@@ -75,11 +75,9 @@ config separators =
     or a separator. Follow the quote-escaping advice above to get around this.
 
 -}
-type
-    Problem
-    -- TODO: need source location for both of these!
-    = SourceEndedWithoutClosingQuote
-    | AdditionalCharactersAfterClosingQuote
+type Problem
+    = SourceEndedWithoutClosingQuote Int
+    | AdditionalCharactersAfterClosingQuote Int
 
 
 {-| Parse some data into a string-only list of lists. Prefer
@@ -94,7 +92,7 @@ parse (Config internalConfig) source =
         finalLength =
             String.length source
 
-        parseQuotedField : List String -> Int -> Int -> Result Problem ( String, Int )
+        parseQuotedField : List String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
         parseQuotedField segments startOffset endOffset =
             if endOffset >= finalLength then
                 Err SourceEndedWithoutClosingQuote
@@ -190,7 +188,7 @@ parse (Config internalConfig) source =
                             parseHelp (value :: row) rows afterQuotedField afterQuotedField
 
                     Err problem ->
-                        Err problem
+                        Err (problem (List.length rows + 1))
 
             else
                 parseHelp
@@ -257,7 +255,7 @@ parse (Config internalConfig) source =
                             parseUSCsvHelp (value :: row) rows afterQuotedField afterQuotedField
 
                     Err problem ->
-                        Err problem
+                        Err (problem (List.length rows + 1))
 
             else
                 parseUSCsvHelp
@@ -319,7 +317,7 @@ parse (Config internalConfig) source =
                             parseEUCsvHelp (value :: row) rows afterQuotedField afterQuotedField
 
                     Err problem ->
-                        Err problem
+                        Err (problem (List.length rows + 1))
 
             else
                 parseEUCsvHelp

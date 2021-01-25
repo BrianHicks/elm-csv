@@ -413,11 +413,11 @@ errorToString error =
         ConfigError Parser.NeedNonBlankRowSeparator ->
             "Row separator must not be blank."
 
-        ParsingError Parser.SourceEndedWithoutClosingQuote ->
-            "The source ended in a quoted field without a closing quote."
+        ParsingError (Parser.SourceEndedWithoutClosingQuote row) ->
+            "The source ended on row " ++ String.fromInt row ++ " in a quoted field without a closing quote."
 
-        ParsingError Parser.AdditionalCharactersAfterClosingQuote ->
-            "On row X, character Y in the source, there were additional characters in a field after the closing quote."
+        ParsingError (Parser.AdditionalCharactersAfterClosingQuote row) ->
+            "On row " ++ String.fromInt row ++ " in the source, there were additional characters in a field after a closing quote."
 
         DecodingError err ->
             let
