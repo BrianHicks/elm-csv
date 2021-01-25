@@ -66,6 +66,18 @@ config separators =
             Err NeedNonBlankFieldSeparator
 
 
+{-| Something went wrong during parsing! What was it?
+
+  - `SourceEndedWithoutClosingQuote`: we started parsing a quoted field,
+    but the file ended before we saw a closing quote. If you meant to have
+    a literal quote in your data, quote the whole field and then escape the
+    literal quote by replacing it with `""`. For example, `": double prime`
+    would be escaped as `"": double prime`
+  - `AdditionalCharactersAfterClosingQuote`: we found the closing pair of a
+    quoted field, but there was data after it instead of the end of the file
+    or a separator. Follow the quote-escaping advice above to get around this.
+
+-}
 type
     Problem
     -- TODO: need source location for both of these!
