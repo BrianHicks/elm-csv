@@ -157,17 +157,17 @@ parseTest =
                                     \_ ->
                                         "\"a"
                                             |> parse (unsafeCustomConfig config)
-                                            |> Expect.err
+                                            |> Expect.equal (Err Parser.SourceEndedWithoutClosingQuote)
                                 , test "additional characters after the closing quote but before the field separator is an error" <|
                                     \_ ->
                                         ("\"a\"b" ++ config.rowSeparator)
                                             |> parse (unsafeCustomConfig config)
-                                            |> Expect.err
+                                            |> Expect.equal (Err Parser.AdditionalCharactersAfterClosingQuote)
                                 , test "additional characters after the closing quote but before the row separator is an error" <|
                                     \_ ->
                                         ("\"a\"b" ++ config.fieldSeparator)
                                             |> parse (unsafeCustomConfig config)
-                                            |> Expect.err
+                                            |> Expect.equal (Err Parser.AdditionalCharactersAfterClosingQuote)
                                 ]
                             ]
                     ]
