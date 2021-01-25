@@ -6,6 +6,41 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+## Final parser speedup, January 25, 2021 (1.0.1)
+
+I think I've optimized the parser as much as I possibly can (or at least as much as I want to right now.)
+I've also made a bunch of bug fixes (and added the same inlining optimization for `;`-separated values, common in Europe.)
+
+Let's get a final number to see how far we've come:
+
+| Size   | Naive     | Real       | % Change  |
+|--------|----------:|-----------:|----------:|
+| 0 rows | 3,203,108 | 19,949,199 |  +522.81% |
+| 1 row  | 1,811,039 |  1,311,312 |   -27.59% |
+| 2 rows |   998,932 |    681,188 |   -31.81% |
+| 4 rows |   551,327 |    341,781 |   -38.01% |
+| 8 rows |   297,552 |    172,720 |   -41.95% |
+
+| Size   | Naive     | Real      | % Change |
+|--------|----------:|----------:|---------:|
+| 0 rows | 2,985,148 | 2,834,003 |   -5.06% |
+| 1 row  | 1,704,020 |    64,626 |  -96.21% |
+| 2 rows |   939,422 |    32,939 |  -96.49% |
+| 4 rows |   530,027 |    16,667 |  -96.86% |
+| 8 rows |   286,299 |     8,261 |  -97.11% |
+
+We were down like 100% before, so this is a big improvement!
+Let's make that percentage adjustment using the naive implementation and see where we're at:
+
+| Size   | Before | After     | Adjustment | After, Adjusted | % Change  |
+|--------|--------|-----------|------------|-----------------|----------:|
+| 1 row  | 64,626 | 1,311,312 |     -6.28% |       1,228,961 | +1,801.65 |
+| 2 rows | 32,939 |   681,188 |     -6.40% |         637,591 | +1,835.67 |
+| 4 rows | 16,667 |   341,781 |     -4.01% |         328,076 | +1,868.42 |
+| 8 rows |  8,261 |   172,720 |     -3.96% |         165,880 | +1,907.99 |
+
+So I'm going to claim it's **19x faster**, since most CSVs I've worked with are 8 rows or longer.
+
 ## Inline "," and "\r\n", January 25, 2021 (1.0.1)
 
 I'm going to copy the whole parser function and make a version that tests literals instead of references.
