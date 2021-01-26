@@ -6,7 +6,7 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
-## Don't duplicate slices, January 25, 2021 (1.0.1)
+## Don't duplicate slices (January 25, 2021)
 
 I was slicing off the first charcter of the string three times.
 That only needs to be done once.
@@ -24,7 +24,7 @@ That only needs to be done once.
 
 I also added a 16-row test because the function is fast enough now that doing so completes in a reasonable time, and a 32-row test just for this instance.
 
-## Subtraction instead of comparison, January 25, 2021 (1.0.1)
+## Subtraction instead of comparison (January 25, 2021)
 
 If you've got integers, doing `(x - y) >= 0` is faster than `x < y` because the compiler generates literally that code instead of using a comparator function.
 (Thanks again, Andrey!)
@@ -40,7 +40,7 @@ If you've got integers, doing `(x - y) >= 0` is faster than `x < y` because the 
 For 8 rows: +10.54% to the new values (I changed monitor configs again between last run and now.)
 That means that 8 rows adjusted is like 183,302 times per second, a +6.13% improvement.
 
-## Final parser speedup, January 25, 2021 (1.0.1)
+## Final parser speedup (January 25, 2021)
 
 I think I've optimized the parser as much as I possibly can (or at least as much as I want to right now.)
 I've also made a bunch of bug fixes (and added the same inlining optimization for `;`-separated values, common in Europe.)
@@ -74,7 +74,7 @@ For the benchmark with 8 rows, that's 246 characters.
 So previously, we could process that 8,261 times per second, or 2,032,206 characters per second.
 Now we can do it 165,880 (adjusted) times per second, or 40,806,480 characters per second!
 
-## Inline "," and "\r\n", January 25, 2021 (1.0.1)
+## Inline "," and "\r\n" (January 25, 2021)
 
 I'm going to copy the whole parser function and make a version that tests literals instead of references.
 That should make the compiler use direct JS `===` instead of `_Utils_eq`.
@@ -99,7 +99,7 @@ Looks like the naive implementation differs more than I'd like (~6%, vs ~2% befo
 
 Ok, wow, that's probably worth keeping!
 
-## Re-baseline once quoted field parser is finished, January 25, 2021 (1.0.1)
+## Re-baseline once quoted field parser is finished (January 25, 2021)
 
 I finished the quoted field parser.
 It shouldn't have slowed down *too* much (it's doing the same comparison as before.)
@@ -119,7 +119,7 @@ I tried quieting my computer down (had some additional chat apps open and a diff
 I don't see a big difference in the generated code, so I think this might be a fluke.
 Everything seems to be within a couple percentage points of where I want it to be, so I'm going to move ahead.
 
-## Defer slicing until the decoding step, January 25, 2021 (1.0.1)
+## Defer slicing until the decoding step (January 25, 2021)
 
 We won't necessarily use all the fields we parse, so we can just keep track of offsets instead of slicing directly.
 This will cause a little issue for quoted strings, but we could get around it by returning `(Int, Int, Bool)` where the bool indicates whether the field is quoted or not and replacing `""` with `"` after slicing if it is.
@@ -165,7 +165,7 @@ Well, that's that; guess I should keep using `List`!
 I probably could have predicted that reversing the array would roughly double the time, but I wouldn't have predicted that `set` on an `Array` initialized to the right length would be slower than `push`.
 It'd be the opposite if we were mutating the array directly, but I guess since we aren't it's faster to keep all the null values and create a new reference or something.
 
-## Avoiding passing next source slice, January 24, 2021 (1.0.1)
+## Avoiding passing next source slice (January 24, 2021)
 
 We can definitely just keep the slice indexes around instead of truncating the string.
 Ok, let's slice into the full source!
@@ -190,7 +190,7 @@ From the last time I compared benchmarks to benchmarks:
 Huh!
 Not quite the slam dunk I was expecting, but the effect seems to grow with longer CSVs, so I'll take it.
 
-## Avoiding tuple allocation, January 24, 2021 (1.0.1)
+## Avoiding tuple allocation (January 24, 2021)
 
 Andrey (w0rm) pointed out that `String.uncons` is allocating a `Maybe ( Char, String )` on every iteration.
 He suggested that getting the length of the string on each iteration ([constant time](https://jsbench.me/0dkkb3th3a/1)) or simply checking prefixes ([`slice` and `startsWith` should be equivalent](https://jsbench.me/mikkb4dm2s/1)) may be faster.
@@ -207,7 +207,7 @@ Let's try!
 Hmm, this didn't actually make things faster!
 But I think this is required for further improvements, so I'm going to keep it (for now.)
 
-## Hand-Rolled Parser, January 24, 2021 (1.0.1)
+## Hand-Rolled Parser (January 24, 2021)
 
 I can keep (mostly) the same API, but probably get a big speedup by rolling my own parser function on `String` directly.
 (nb. it's not done yet; I haven't done quoted values.
@@ -234,7 +234,7 @@ They're mostly within a couple percent of each other (except for 8, which is ~16
 Seems like something like a 13x speedup.
 Works for me!
 
-## Bail Early, January 23, 2021 (1.0.1)
+## Bail Early (January 23, 2021)
 
 I can get the 0 rows edge case way down by checking for that instead of using the `elm/parser` machinery.
 
@@ -248,7 +248,7 @@ I can get the 0 rows edge case way down by checking for that instead of using th
 
 ... yeah, that works.
 
-## Initial Measurement, January 23, 2021 (1.0.1)
+## Initial Measurement (January 23, 2021)
 
 | Size   | Naive     | Real      | % Change |
 |--------|----------:|----------:|---------:|
