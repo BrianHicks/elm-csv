@@ -6,6 +6,28 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+## Final parser speedup for this document (January 26, 2021)
+
+As of 00ac997c:
+
+| Size    | Naive     | Real       | % Change  |
+|---------|----------:|-----------:|----------:|
+| 0 rows  | 3,077,611 | 19,439,037 |  +531.63% |
+| 1 row   | 1,747,415 |  1,853,376 |    +6.06% |
+| 2 rows  |   979,352 |    931,390 |    -4.90% |
+| 4 rows  |   535,850 |    469,160 |   -12.45% |
+| 8 rows  |   287,293 |    235,588 |   -18.00% |
+| 16 rows |   146,172 |    118,980 |   -18.60% |
+
+| Size   | Before    | After     | Adjustment | After, Adjusted | % Change  |
+|--------|----------:|----------:|-----------:|----------------:|----------:|
+| 1 row  |    64,626 | 1,853,376 |     -2.55% |       1,806,115 | 2,694.72% |
+| 2 rows |    32,939 |   931,390 |     -4.25% |         891,806 | 2,607.45% |
+| 4 rows |    16,667 |   469,160 |     -1.10% |         463,999 | 2,683.94% |
+| 8 rows |     8,261 |   235,588 |     -0.35% |         234,763 | 2,741.82% |
+
+Overall, a 26x speedup!
+
 ## Don't duplicate slices (January 25, 2021)
 
 I was slicing off the first charcter of the string three times.
@@ -40,7 +62,7 @@ If you've got integers, doing `(x - y) >= 0` is faster than `x < y` because the 
 For 8 rows: +10.54% to the new values (I changed monitor configs again between last run and now.)
 That means that 8 rows adjusted is like 183,302 times per second, a +6.13% improvement.
 
-## Final parser speedup (January 25, 2021)
+## Measuring progres on parser speedup (January 25, 2021)
 
 I think I've optimized the parser as much as I possibly can (or at least as much as I want to right now.)
 I've also made a bunch of bug fixes (and added the same inlining optimization for `;`-separated values, common in Europe.)
