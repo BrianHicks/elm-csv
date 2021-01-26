@@ -3,7 +3,7 @@ module Csv.Decode exposing
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
     , map, map2, map3, pipeline, required
-    , oneOf, succeed, fail, andThen, fromResult
+    , oneOf, succeed, fail, andThen, fromResult, fromMaybe
     )
 
 {-| Decode values from CSV. A crash course on constructing decoders:
@@ -48,7 +48,7 @@ Figuring out how you'd write an equivalent JSON decoder may help!
 
 ## Fancy Decoding
 
-@docs oneOf, succeed, fail, andThen, fromResult
+@docs oneOf, succeed, fail, andThen, fromResult, fromMaybe
 
 -}
 
@@ -670,4 +670,31 @@ fromResult result =
             succeed great
 
         Err problem ->
+            fail problem
+
+
+{-| Like `fromResult` but you have to specify the error message since
+`Nothing` has no further information.
+
+For example, you could implement something like [`int`](#int) using this:
+
+    myInt : Decoder Int
+    myInt =
+        string
+            |> andThen (fromMaybe "Couldn't parse an int" << String.toInt)
+
+    decodeCsv NoFieldNames myInt "123"
+    --> Ok [ 123 ]
+
+(That said, you probably want to use [`int`](#int) instead... it has better
+error messages!)
+
+-}
+fromMaybe : String -> Maybe a -> Decoder a
+fromMaybe problem maybe =
+    case maybe of
+        Just value ->
+            succeed value
+
+        Nothing ->
             fail problem

@@ -405,3 +405,32 @@ fromResultTest =
                             )
                         )
         ]
+
+
+fromMaybeTest : Test
+fromMaybeTest =
+    let
+        myInt : Decoder Int
+        myInt =
+            Decode.string
+                |> Decode.andThen (Decode.fromMaybe "Expected an int" << String.toInt)
+    in
+    describe "fromMaybe"
+        [ test "succeeds when the function returns Just" <|
+            \_ ->
+                "123"
+                    |> Decode.decodeCsv NoFieldNames myInt
+                    |> Expect.equal (Ok [ 123 ])
+        , test "fails when the function returns Nothing" <|
+            \_ ->
+                "banana"
+                    |> Decode.decodeCsv NoFieldNames myInt
+                    |> Expect.equal
+                        (Err
+                            (DecodingError
+                                { row = 0
+                                , problem = Decode.Failure "Expected an int"
+                                }
+                            )
+                        )
+        ]
