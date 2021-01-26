@@ -298,19 +298,13 @@ getFieldNames headers rows =
 -}
 decodeCsv : FieldNames -> Decoder a -> String -> Result Error (List a)
 decodeCsv =
-    decodeCustom
-        { rowSeparator = "\u{000D}\n"
-        , fieldSeparator = ","
-        }
+    decodeCustom { fieldSeparator = ',' }
 
 
 {-| Convert something shaped roughly like a CSV. For example, to decode
 tab-separated values where the row separator is a single newline character:
 
-    decodeCustom
-        { rowSeparator = "\n"
-        , fieldSeparator = "\t"
-        }
+    decodeCustom {  fieldSeparator = '\t' }
         NoFieldNames
         (map2 Tuple.pair
             (column 0 int)
@@ -320,11 +314,10 @@ tab-separated values where the row separator is a single newline character:
         --> Ok [ ( 1, "Brian" ), ( 2, "Atlas" ) ]
 
 -}
-decodeCustom : { rowSeparator : String, fieldSeparator : String } -> FieldNames -> Decoder a -> String -> Result Error (List a)
-decodeCustom separators fieldNames decoder source =
-    Parser.config separators
-        |> Result.mapError ConfigError
-        |> Result.andThen (\config -> Parser.parse config source |> Result.mapError ParsingError)
+decodeCustom : { fieldSeparator : Char } -> FieldNames -> Decoder a -> String -> Result Error (List a)
+decodeCustom config fieldNames decoder source =
+    Parser.parse config source
+        |> Result.mapError ParsingError
         |> Result.andThen (applyDecoder fieldNames decoder)
 
 
@@ -367,8 +360,7 @@ Some more detail:
 
 -}
 type Error
-    = ConfigError Parser.ConfigProblem
-    | ParsingError Parser.Problem
+    = ParsingError Parser.Problem
     | DecodingError { row : Int, problem : Problem }
 
 
@@ -407,12 +399,6 @@ type Problem
 errorToString : Error -> String
 errorToString error =
     case error of
-        ConfigError Parser.NeedNonBlankFieldSeparator ->
-            "Field separator must not be blank."
-
-        ConfigError Parser.NeedNonBlankRowSeparator ->
-            "Row separator must not be blank."
-
         ParsingError (Parser.SourceEndedWithoutClosingQuote row) ->
             "The source ended on row " ++ String.fromInt row ++ " in a quoted field without a closing quote."
 

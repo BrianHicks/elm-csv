@@ -1,14 +1,6 @@
-module Csv.Parser exposing
-    ( Config, config, ConfigProblem(..)
-    , parse, Problem(..)
-    )
+module Csv.Parser exposing (parse, Problem(..))
 
 {-| CSV (and TSV) parsing.
-
-
-## Configuration
-
-@docs Config, config, ConfigProblem
 
 
 ## Parsing
@@ -16,59 +8,6 @@ module Csv.Parser exposing
 @docs parse, Problem
 
 -}
-
-
-{-| See [`config`](#config)
--}
-type Config
-    = Config InternalConfig
-
-
-type alias InternalConfig =
-    { row : String
-    , rowFirst : String
-    , rowRest : String
-    , rowLength : Int
-    , field : String
-    , fieldLength : Int
-    , fieldFirst : String
-    , fieldRest : String
-    }
-
-
-{-| Not every string is a valid separator. This structure lets you know if
-[`config`](#config) gets something bad.
--}
-type ConfigProblem
-    = NeedNonBlankRowSeparator
-    | NeedNonBlankFieldSeparator
-
-
-{-| Parse a row and field separator into something [`parse`](#parse) can use.
--}
-config :
-    { rowSeparator : String
-    , fieldSeparator : String
-    }
-    -> Result ConfigProblem Config
-config separators =
-    if String.length separators.rowSeparator == 0 then
-        Err NeedNonBlankRowSeparator
-
-    else if String.length separators.fieldSeparator == 0 then
-        Err NeedNonBlankFieldSeparator
-
-    else
-        (Ok << Config)
-            { row = separators.rowSeparator
-            , rowLength = String.length separators.rowSeparator
-            , rowFirst = String.left 1 separators.rowSeparator
-            , rowRest = String.dropLeft 1 separators.rowSeparator
-            , field = separators.fieldSeparator
-            , fieldLength = String.length separators.fieldSeparator
-            , fieldFirst = String.left 1 separators.fieldSeparator
-            , fieldRest = String.dropLeft 1 separators.fieldSeparator
-            }
 
 
 {-| Something went wrong during parsing! What was it?
@@ -93,9 +32,13 @@ using `Csv.Decode.decodeCsv` or `Csv.Decode.decodeCustom`
 unless you need something unusally custom (and please [open an
 issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
 -}
-parse : Config -> String -> Result Problem (List (List String))
-parse (Config internalConfig) source =
+parse : { fieldSeparator : Char } -> String -> Result Problem (List (List String))
+parse config source =
     let
+        fieldSeparator : String
+        fieldSeparator =
+            String.fromChar config.fieldSeparator
+
         finalLength : Int
         finalLength =
             String.length source
@@ -111,38 +54,44 @@ parse (Config internalConfig) source =
                     segment =
                         String.slice startOffset endOffset source
                 in
-                if (endOffset + 2) > finalLength then
+                if (endOffset + 2) - finalLength >= 0 then
                     Ok
                         ( List.foldl (++) "" (segment :: segments)
                         , endOffset + 1
                         )
 
-                else if String.slice (endOffset + 1) (endOffset + 2) source == "\"" then
-                    -- "" is a quoted ". Unescape it and keep going.
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 2
-                    in
-                    parseQuotedField
-                        ("\"" :: segment :: segments)
-                        newPos
-                        newPos
-
-                else if String.slice (endOffset + 1) (endOffset + 1 + internalConfig.fieldLength) source == internalConfig.field then
-                    Ok
-                        ( List.foldl (++) "" (segment :: segments)
-                        , endOffset + 1 + internalConfig.fieldLength
-                        )
-
-                else if String.slice (endOffset + 1) (endOffset + 1 + internalConfig.rowLength) source == internalConfig.row then
-                    Ok
-                        ( List.foldl (++) "" (segment :: segments)
-                        , endOffset + 1 + internalConfig.rowLength
-                        )
-
                 else
-                    Err AdditionalCharactersAfterClosingQuote
+                    let
+                        next : String
+                        next =
+                            String.slice (endOffset + 1) (endOffset + 2) source
+                    in
+                    if next == "\"" then
+                        -- "" is a quoted ". Unescape it and keep going.
+                        let
+                            newPos : Int
+                            newPos =
+                                endOffset + 2
+                        in
+                        parseQuotedField
+                            ("\"" :: segment :: segments)
+                            newPos
+                            newPos
+
+                    else if next == fieldSeparator || next == "\n" then
+                        Ok
+                            ( List.foldl (++) "" (segment :: segments)
+                            , endOffset + 2
+                            )
+
+                    else if next == "\u{000D}" && String.slice (endOffset + 2) (endOffset + 3) source == "\n" then
+                        Ok
+                            ( List.foldl (++) "" (segment :: segments)
+                            , endOffset + 3
+                            )
+
+                    else
+                        Err AdditionalCharactersAfterClosingQuote
 
             else
                 parseQuotedField segments startOffset (endOffset + 1)
@@ -163,11 +112,11 @@ parse (Config internalConfig) source =
                     first =
                         String.slice endOffset (endOffset + 1) source
                 in
-                if first == internalConfig.fieldFirst && String.slice (endOffset + 1) (endOffset + internalConfig.fieldLength) source == internalConfig.fieldRest then
+                if first == fieldSeparator then
                     let
                         newPos : Int
                         newPos =
-                            endOffset + internalConfig.fieldLength
+                            endOffset + 1
                     in
                     parseHelp
                         (String.slice startOffset endOffset source :: row)
@@ -175,11 +124,23 @@ parse (Config internalConfig) source =
                         newPos
                         newPos
 
-                else if first == internalConfig.rowFirst && String.slice (endOffset + 1) (endOffset + internalConfig.rowLength) source == internalConfig.rowRest then
+                else if first == "\n" then
                     let
                         newPos : Int
                         newPos =
-                            endOffset + internalConfig.rowLength
+                            endOffset + 1
+                    in
+                    parseHelp
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
                     in
                     parseHelp
                         []
@@ -210,156 +171,9 @@ parse (Config internalConfig) source =
                         rows
                         startOffset
                         (endOffset + 1)
-
-        {- This should be *exactly* the same as parseHelp, except it tries
-           to consistently compare slices to literals instead of looking them
-           up in `internalConfig`. Using literal values like this lets the
-           compiler optimize to a literal `===`, which is much faster than the
-           recursive compare-by-value equality call it'd generate otherwise.
-
-           This gives like a 20% speedup for short sources, and the speedup
-           grows with the source length.
-        -}
-        parseUSCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
-        parseUSCsvHelp row rows startOffset endOffset =
-            if endOffset - finalLength >= 0 then
-                let
-                    finalRow : List String
-                    finalRow =
-                        List.reverse (String.slice startOffset endOffset source :: row)
-                in
-                Ok (List.reverse (finalRow :: rows))
-
-            else
-                let
-                    first : String
-                    first =
-                        String.slice endOffset (endOffset + 1) source
-                in
-                if first == "," then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 1
-                    in
-                    parseUSCsvHelp
-                        (String.slice startOffset endOffset source :: row)
-                        rows
-                        newPos
-                        newPos
-
-                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 2
-                    in
-                    parseUSCsvHelp
-                        []
-                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                        newPos
-                        newPos
-
-                else if first == "\"" then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 1
-                    in
-                    case parseQuotedField [] newPos newPos of
-                        Ok ( value, afterQuotedField ) ->
-                            if afterQuotedField >= finalLength then
-                                Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                            else
-                                parseUSCsvHelp (value :: row) rows afterQuotedField afterQuotedField
-
-                        Err problem ->
-                            Err (problem (List.length rows + 1))
-
-                else
-                    parseUSCsvHelp
-                        row
-                        rows
-                        startOffset
-                        (endOffset + 1)
-
-        {- See comment on `parseCsvHelp`. This does the same thing but for
-           semicolon-delimited CSVs (common in Europe because numbers are
-           written like `1.000,00` so the comma creates collisions.)
-        -}
-        parseEUCsvHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
-        parseEUCsvHelp row rows startOffset endOffset =
-            if endOffset - finalLength >= 0 then
-                let
-                    finalRow : List String
-                    finalRow =
-                        List.reverse (String.slice startOffset endOffset source :: row)
-                in
-                Ok (List.reverse (finalRow :: rows))
-
-            else
-                let
-                    first : String
-                    first =
-                        String.slice endOffset (endOffset + 1) source
-                in
-                if first == ";" then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 1
-                    in
-                    parseEUCsvHelp
-                        (String.slice startOffset endOffset source :: row)
-                        rows
-                        newPos
-                        newPos
-
-                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 2
-                    in
-                    parseEUCsvHelp
-                        []
-                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                        newPos
-                        newPos
-
-                else if first == "\"" then
-                    let
-                        newPos : Int
-                        newPos =
-                            endOffset + 1
-                    in
-                    case parseQuotedField [] newPos newPos of
-                        Ok ( value, afterQuotedField ) ->
-                            if afterQuotedField >= finalLength then
-                                Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                            else
-                                parseEUCsvHelp (value :: row) rows afterQuotedField afterQuotedField
-
-                        Err problem ->
-                            Err (problem (List.length rows + 1))
-
-                else
-                    parseEUCsvHelp
-                        row
-                        rows
-                        startOffset
-                        (endOffset + 1)
     in
     if String.isEmpty source then
         Ok []
-
-    else if internalConfig.field == "," && internalConfig.row == "\u{000D}\n" then
-        parseUSCsvHelp [] [] 0 0
-
-    else if internalConfig.field == ";" && internalConfig.row == "\u{000D}\n" then
-        parseEUCsvHelp [] [] 0 0
 
     else
         parseHelp [] [] 0 0
