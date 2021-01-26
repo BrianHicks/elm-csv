@@ -656,21 +656,18 @@ For example, here's how you could parse a hexadecimal number with
 
     hex : Decoder Int
     hex =
-        fromResult Hex.fromString
+        string
+            |> andThen (fromResult << Hex.fromString)
 
     decodeCsv NoFieldNames hex "ff"
     --> Ok [ 255 ]
 
 -}
-fromResult : (String -> Result String a) -> Decoder a
-fromResult convert =
-    andThen
-        (\input ->
-            case convert input of
-                Ok great ->
-                    succeed great
+fromResult : Result String a -> Decoder a
+fromResult result =
+    case result of
+        Ok great ->
+            succeed great
 
-                Err problem ->
-                    fail problem
-        )
-        string
+        Err problem ->
+            fail problem

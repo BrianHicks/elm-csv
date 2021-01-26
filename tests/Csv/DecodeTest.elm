@@ -380,16 +380,22 @@ andThenTest =
 
 fromResultTest : Test
 fromResultTest =
+    let
+        hex : Decoder Int
+        hex =
+            Decode.string
+                |> Decode.andThen (Decode.fromResult << Hex.fromString)
+    in
     describe "fromResult"
         [ test "succeeds when the function returns Ok" <|
             \_ ->
                 "ff"
-                    |> Decode.decodeCsv NoFieldNames (Decode.fromResult Hex.fromString)
+                    |> Decode.decodeCsv NoFieldNames hex
                     |> Expect.equal (Ok [ 255 ])
         , test "fails when the function returns Err" <|
             \_ ->
                 "banana"
-                    |> Decode.decodeCsv NoFieldNames (Decode.fromResult Hex.fromString)
+                    |> Decode.decodeCsv NoFieldNames hex
                     |> Expect.equal
                         (Err
                             (DecodingError
