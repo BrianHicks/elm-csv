@@ -45,11 +45,11 @@ type alias Pet =
 
 decoder : Decoder Pet
 decoder =
-    Decode.pipeline Pet
-        |> Decode.required (Decode.field "id" Decode.int)
-        |> Decode.required (Decode.field "name" Decode.string)
-        |> Decode.required (Decode.field "species" Decode.string)
-        |> Decode.required (Decode.field "weight" (Decode.blank Decode.float))
+    Decode.into Pet
+        |> Decode.pipeline (Decode.field "id" Decode.int)
+        |> Decode.pipeline (Decode.field "name" Decode.string)
+        |> Decode.pipeline (Decode.field "species" Decode.string)
+        |> Decode.pipeline (Decode.field "weight" (Decode.blank Decode.float))
 
 
 csv : String

@@ -2,7 +2,7 @@ module Csv.Decode exposing
     ( Decoder, string, int, float, blank
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
-    , map, map2, map3, pipeline, required
+    , map, map2, map3, into, pipeline
     , oneOf, succeed, fail, andThen, fromResult, fromMaybe
     )
 
@@ -17,11 +17,11 @@ module Csv.Decode exposing
     to handle the failure gracefully. If you just need to lift a
     `Result String a` into a decoder, use [`fromResult`](#fromResult)
   - To decode tuples, pass a constructor to [`map2`](#map2) or [`map3`](#map3).
-  - To decode records, use [`pipeline`](#pipeline) and [`required`](#required).
+  - To decode records, use [`into`](#into) and [`pipeline`](#pipeline).
 
 All of those functions have examples in their documentation. Check 'em out!
 
-If you run into trouble, this library intentionally sticks as close to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and [`NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) semantics as possible.
+If you run into trouble, this library intentionally sticks as close to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and [`NoRedInk/elm-json-decode-into`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-into/latest/) semantics as possible.
 Figuring out how you'd write an equivalent JSON decoder may help!
 (But if you run into something you truly can't do, please [open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
 
@@ -43,7 +43,7 @@ Figuring out how you'd write an equivalent JSON decoder may help!
 
 ## Transforming Values
 
-@docs map, map2, map3, pipeline, required
+@docs map, map2, map3, into, pipeline
 
 
 ## Fancy Decoding
@@ -489,7 +489,7 @@ map2 transform (Decoder decodeA) (Decoder decodeB) =
 
 
 {-| Like [`map2`](#map2), but with three decoders. `map4` and beyond don't
-exist in this package. Use [`pipeline`](#pipeline) to decode records instead!
+exist in this package. Use [`into`](#into) to decode records instead!
 
     decodeCsv NoFieldNames
         (map3 (\r g b -> (r, g, b))
@@ -512,7 +512,7 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
         )
 
 
-{-| Need to decode into an object? Use a pipeline. The way this works: you
+{-| Need to decode into an object? Use a into. The way this works: you
 provide a function that takes as many arguments as you need, and then send
 it values by providing decoders.
 
@@ -525,11 +525,11 @@ it values by providing decoders.
 
     petDecoder : Decoder Pet
     petDecoder =
-        pipeline Pet
-            |> required (column 0 int)
-            |> required (column 1 string)
-            |> required (column 2 string)
-            |> required (column 3 float)
+        into Pet
+            |> pipeline (column 0 int)
+            |> pipeline (column 1 string)
+            |> pipeline (column 2 string)
+            |> pipeline (column 3 float)
 
 Now you can decode pets like this:
 
@@ -537,15 +537,15 @@ Now you can decode pets like this:
     --> Ok [ { id = 1, name = "Atlas", species = "cat", weight = 14.5 } ]
 
 -}
-pipeline : (a -> b) -> Decoder (a -> b)
-pipeline =
+into : (a -> b) -> Decoder (a -> b)
+into =
     succeed
 
 
-{-| See [`pipeline`](#pipeline).
+{-| See [`into`](#into).
 -}
-required : Decoder a -> Decoder (a -> b) -> Decoder b
-required =
+pipeline : Decoder a -> Decoder (a -> b) -> Decoder b
+pipeline =
     map2 (\value fn -> fn value)
 
 
@@ -681,7 +681,7 @@ For example, you could implement something like [`int`](#int) using this:
     myInt : Decoder Int
     myInt =
         string
-            |> andThen (fromMaybe "Couldn't parse an int" << String.toInt)
+            |> andThen (fromMaybe "Expected an int" << String.toInt)
 
     decodeCsv NoFieldNames myInt "123"
     --> Ok [ 123 ]
