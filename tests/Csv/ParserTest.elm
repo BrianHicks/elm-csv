@@ -62,14 +62,6 @@ parseTest =
                 , fieldSeparator = "\t"
                 }
               )
-
-            -- this one doesn't really exist in the real world, but we want to
-            -- make sure that it will work if someone does need it.
-            , ( "LF-only Double-bar separated values"
-              , { rowSeparator = "\n"
-                , fieldSeparator = "||"
-                }
-              )
             ]
     in
     configurations
