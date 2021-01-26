@@ -17,21 +17,11 @@ encodeCsv howManyRows =
         |> String.join "\u{000D}\n"
 
 
-crashButWithoutDependingOnDebug : () -> a
-crashButWithoutDependingOnDebug _ =
-    crashButWithoutDependingOnDebug ()
-
-
 main : BenchmarkProgram
 main =
     let
         config =
-            case Parser.config { rowSeparator = "\u{000D}\n", fieldSeparator = "," } of
-                Ok config_ ->
-                    config_
-
-                Err _ ->
-                    crashButWithoutDependingOnDebug ()
+            { fieldSeparator = ',' }
     in
     [ 0, 1, 2, 4, 8, 16 ]
         |> List.map
