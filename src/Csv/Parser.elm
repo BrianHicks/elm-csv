@@ -43,8 +43,8 @@ parse config source =
         finalLength =
             String.length source
 
-        parseQuotedField : List String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
-        parseQuotedField segments startOffset endOffset =
+        parseQuotedField : (String -> Bool) -> List String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
+        parseQuotedField isFieldSeparator segments startOffset endOffset =
             if endOffset - finalLength >= 0 then
                 Err SourceEndedWithoutClosingQuote
 
@@ -74,11 +74,12 @@ parse config source =
                                 endOffset + 2
                         in
                         parseQuotedField
+                            isFieldSeparator
                             ("\"" :: segment :: segments)
                             newPos
                             newPos
 
-                    else if next == fieldSeparator || next == "\n" then
+                    else if isFieldSeparator next || next == "\n" then
                         Ok
                             ( List.foldl (++) "" (segment :: segments)
                             , endOffset + 2
@@ -94,10 +95,10 @@ parse config source =
                         Err AdditionalCharactersAfterClosingQuote
 
             else
-                parseQuotedField segments startOffset (endOffset + 1)
+                parseQuotedField isFieldSeparator segments startOffset (endOffset + 1)
 
-        parseHelp : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
-        parseHelp row rows startOffset endOffset =
+        parseHelp : (String -> Bool) -> List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
+        parseHelp isFieldSeparator row rows startOffset endOffset =
             if endOffset - finalLength >= 0 then
                 let
                     finalRow : List String
@@ -112,13 +113,14 @@ parse config source =
                     first =
                         String.slice endOffset (endOffset + 1) source
                 in
-                if first == fieldSeparator then
+                if isFieldSeparator first then
                     let
                         newPos : Int
                         newPos =
                             endOffset + 1
                     in
                     parseHelp
+                        isFieldSeparator
                         (String.slice startOffset endOffset source :: row)
                         rows
                         newPos
@@ -131,6 +133,7 @@ parse config source =
                             endOffset + 1
                     in
                     parseHelp
+                        isFieldSeparator
                         []
                         (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
                         newPos
@@ -143,6 +146,7 @@ parse config source =
                             endOffset + 2
                     in
                     parseHelp
+                        isFieldSeparator
                         []
                         (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
                         newPos
@@ -154,19 +158,20 @@ parse config source =
                         newPos =
                             endOffset + 1
                     in
-                    case parseQuotedField [] newPos newPos of
+                    case parseQuotedField isFieldSeparator [] newPos newPos of
                         Ok ( value, afterQuotedField ) ->
                             if afterQuotedField >= finalLength then
                                 Ok (List.reverse (List.reverse (value :: row) :: rows))
 
                             else
-                                parseHelp (value :: row) rows afterQuotedField afterQuotedField
+                                parseHelp isFieldSeparator (value :: row) rows afterQuotedField afterQuotedField
 
                         Err problem ->
                             Err (problem (List.length rows + 1))
 
                 else
                     parseHelp
+                        isFieldSeparator
                         row
                         rows
                         startOffset
@@ -175,5 +180,11 @@ parse config source =
     if String.isEmpty source then
         Ok []
 
+    else if config.fieldSeparator == ',' then
+        parseHelp (\s -> s == ",") [] [] 0 0
+
+    else if config.fieldSeparator == ';' then
+        parseHelp (\s -> s == ";") [] [] 0 0
+
     else
-        parseHelp [] [] 0 0
+        parseHelp (\s -> s == fieldSeparator) [] [] 0 0
