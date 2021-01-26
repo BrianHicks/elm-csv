@@ -6,6 +6,9 @@ The idea here is that if we can get the benchmarks for the real thing to be anyt
 
 Numbers are runs per second on Brian's MacBook Pro (2017, 3.1 Ghz Quad-Core Intel Core i7 with 16GB memory) in Chrome (latest at time of writing.)
 
+After this document was finalized, I had to make some changes to the parser that knock about 7% off the speed, but make the parser way more robust by being more accepting of different kinds of newlines.
+It's still about 25x faster than the 1.0.1 parser.
+
 ## Final parser speedup for this document (January 26, 2021)
 
 As of 00ac997c:
