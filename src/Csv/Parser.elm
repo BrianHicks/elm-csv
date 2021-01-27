@@ -180,6 +180,23 @@ parse config source =
                     startOffset
                     (endOffset + 1)
 
+        {- This and `parseSemicolon` below are just specialized versions of
+           `parseHelp` that produce more efficient generated code. The whole
+           trick here is to compare to literals instead of variables, which
+           makes the Elm compiler produce code that compares with `===`
+           instead of a helper function that implements value-level comparison.
+
+           To update these functions, just copy the body of `parseHelp`, then:
+
+            1. replace the calls to `isFieldSeparator` with literal equality
+               checks (e.g. `first == ","` in `parseComma`.)
+            2. create a new `isFieldSeparator` to pass to `parseQuotedField`
+               that does the same.
+
+           Benchmark numbers without these functions ported will appear to
+           be much slower, but it's fine to temporarily disable them in the
+           bottom `if` of this function to fix bugs and stuff.
+        -}
         parseComma : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseComma row rows startOffset endOffset =
             let
