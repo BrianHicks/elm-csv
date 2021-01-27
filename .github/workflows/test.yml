@@ -12,7 +12,8 @@ jobs:
           nix_path: nixpkgs=channel:nixos-20.09
       - uses: cachix/cachix-action@v8
         with:
-          name: niv
-          skipPush: true
+          name: elm-csv
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          extraPullNames: niv
       - run: nix-shell --pure --run 'true'
       - run: ./ci.sh
