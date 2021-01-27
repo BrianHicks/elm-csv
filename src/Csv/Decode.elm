@@ -222,6 +222,12 @@ to provide these names, see [`FieldNames`](#FieldNames)
     --> Ok [ "Argentina" ]
 
     decodeCsv
+        FieldNamesFromFirstRow
+        (field "Country" string)
+        " Country \r\nArgentina"
+    --> Ok [ "Argentina" ]
+
+    decodeCsv
         (CustomFieldNames [ "a", "b", "c" ])
         (field "b" int)
         "1,2,3"
@@ -257,7 +263,7 @@ field name (Decoder decoder) =
   - `CustomFieldNames`: use the provided field names in order (so `["Id", "Name"]`
     will mean that "Id" is in column 0 and "Name" is in column 1.)
   - `FieldNamesFromFirstRow`: use the first row of the CSV as the source of
-    field names.
+    field names. The columns of the first row are trimmed.
 
 -}
 type FieldNames
@@ -294,7 +300,7 @@ getFieldNames headers rows =
                     Err (DecodingError { row = 0, problem = NoFieldNamesOnFirstRow })
 
                 first :: rest ->
-                    Ok ( fromList first, 1, rest )
+                    Ok ( fromList (List.map String.trim first), 1, rest )
 
 
 {-| Convert a CSV string into some type you care about using the

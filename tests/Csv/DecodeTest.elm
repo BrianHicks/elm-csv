@@ -187,6 +187,14 @@ fieldTest =
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Ok [ "Atlas" ])
+        , test "uses the headers on the first row, trimmed" <|
+            \_ ->
+                " Name \u{000D}\nAtlas"
+                    |> Decode.decodeCsv
+                        FieldNamesFromFirstRow
+                        (Decode.field "Name" Decode.string)
+                    |> Expect.equal
+                        (Ok [ "Atlas" ])
         , test "fails with the right line number after getting field names from the first row" <|
             \_ ->
                 "Number\u{000D}\nnot a number"
