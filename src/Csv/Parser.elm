@@ -43,8 +43,8 @@ parse config source =
         finalLength =
             String.length source
 
-        parseQuotedField : (String -> Bool) -> List String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
-        parseQuotedField isFieldSeparator segments startOffset endOffset =
+        parseQuotedField : (String -> Bool) -> String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
+        parseQuotedField isFieldSeparator soFar startOffset endOffset =
             if endOffset - finalLength >= 0 then
                 Err SourceEndedWithoutClosingQuote
 
@@ -56,7 +56,7 @@ parse config source =
                 in
                 if (endOffset + 2) - finalLength >= 0 then
                     Ok
-                        ( List.foldl (++) "" (segment :: segments)
+                        ( soFar ++ segment
                         , endOffset + 1
                         )
 
@@ -75,19 +75,19 @@ parse config source =
                         in
                         parseQuotedField
                             isFieldSeparator
-                            ("\"" :: segment :: segments)
+                            (soFar ++ segment ++ "\"")
                             newPos
                             newPos
 
                     else if isFieldSeparator next || next == "\n" then
                         Ok
-                            ( List.foldl (++) "" (segment :: segments)
+                            ( soFar ++ segment
                             , endOffset + 2
                             )
 
                     else if next == "\u{000D}" && String.slice (endOffset + 2) (endOffset + 3) source == "\n" then
                         Ok
-                            ( List.foldl (++) "" (segment :: segments)
+                            ( soFar ++ segment
                             , endOffset + 3
                             )
 
@@ -95,7 +95,7 @@ parse config source =
                         Err AdditionalCharactersAfterClosingQuote
 
             else
-                parseQuotedField isFieldSeparator segments startOffset (endOffset + 1)
+                parseQuotedField isFieldSeparator soFar startOffset (endOffset + 1)
 
         parseHelp : (String -> Bool) -> List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseHelp isFieldSeparator row rows startOffset endOffset =
@@ -161,7 +161,7 @@ parse config source =
                     newPos =
                         endOffset + 1
                 in
-                case parseQuotedField isFieldSeparator [] newPos newPos of
+                case parseQuotedField isFieldSeparator "" newPos newPos of
                     Ok ( value, afterQuotedField ) ->
                         if afterQuotedField >= finalLength then
                             Ok (List.reverse (List.reverse (value :: row) :: rows))
@@ -258,7 +258,7 @@ parse config source =
                     newPos =
                         endOffset + 1
                 in
-                case parseQuotedField (\c -> c == ",") [] newPos newPos of
+                case parseQuotedField (\c -> c == ",") "" newPos newPos of
                     Ok ( value, afterQuotedField ) ->
                         if afterQuotedField >= finalLength then
                             Ok (List.reverse (List.reverse (value :: row) :: rows))
@@ -337,7 +337,7 @@ parse config source =
                     newPos =
                         endOffset + 1
                 in
-                case parseQuotedField (\c -> c == ";") [] newPos newPos of
+                case parseQuotedField (\c -> c == ";") "" newPos newPos of
                     Ok ( value, afterQuotedField ) ->
                         if afterQuotedField >= finalLength then
                             Ok (List.reverse (List.reverse (value :: row) :: rows))
