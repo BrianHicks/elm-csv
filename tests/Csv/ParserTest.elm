@@ -113,6 +113,24 @@ parseTest =
                                 ("\"a\"" ++ config.rowSeparator ++ "\"b\"")
                                     |> parse { fieldSeparator = config.fieldSeparator }
                                     |> Expect.equal (Ok [ [ "a", "b" ] ])
+                        , test "a trailing newline should be ignored" <|
+                            -- https://github.com/BrianHicks/elm-csv/issues/8
+                            \_ ->
+                                (encode config
+                                    [ [ "Country", "Population" ]
+                                    , [ "Agentina", "44361150" ]
+                                    , [ "Brazil", "212652000" ]
+                                    ]
+                                    ++ config.rowSeparator
+                                )
+                                    |> parse { fieldSeparator = config.fieldSeparator }
+                                    |> Expect.equal
+                                        (Ok
+                                            [ [ "Country", "Population" ]
+                                            , [ "Agentina", "44361150" ]
+                                            , [ "Brazil", "212652000" ]
+                                            ]
+                                        )
                         , describe "errors"
                             [ test "not ending a quoted value is an error" <|
                                 \_ ->
@@ -138,8 +156,13 @@ parseTest =
 
 expectRoundTrip : { rowSeparator : String, fieldSeparator : Char } -> List (List String) -> Expectation
 expectRoundTrip config rows =
+    encode config rows
+        |> parse { fieldSeparator = config.fieldSeparator }
+        |> Expect.equal (Ok rows)
+
+
+encode : { rowSeparator : String, fieldSeparator : Char } -> List (List String) -> String
+encode config rows =
     rows
         |> List.map (String.join (String.fromChar config.fieldSeparator))
         |> String.join config.rowSeparator
-        |> parse { fieldSeparator = config.fieldSeparator }
-        |> Expect.equal (Ok rows)
