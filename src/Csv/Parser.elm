@@ -99,12 +99,7 @@ parse config source =
 
         parseHelp : (String -> Bool) -> List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseHelp isFieldSeparator row rows startOffset endOffset =
-            let
-                first : String
-                first =
-                    String.slice endOffset (endOffset + 1) source
-            in
-            if first == "" then
+            if endOffset - finalLength >= 0 then
                 let
                     finalField : String
                     finalField =
@@ -116,69 +111,75 @@ parse config source =
                 else
                     Ok (List.reverse (List.reverse (finalField :: row) :: rows))
 
-            else if isFieldSeparator first then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseHelp
-                    isFieldSeparator
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if first == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseHelp
-                    isFieldSeparator
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 2
-                in
-                parseHelp
-                    isFieldSeparator
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField isFieldSeparator "" newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseHelp isFieldSeparator (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseHelp
-                    isFieldSeparator
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first : String
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if isFieldSeparator first then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseHelp
+                        isFieldSeparator
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseHelp
+                        isFieldSeparator
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseHelp
+                        isFieldSeparator
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField isFieldSeparator "" newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseHelp isFieldSeparator (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseHelp
+                        isFieldSeparator
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
 
         {- This and `parseSemicolon` below are just specialized versions of
            `parseHelp` that produce more efficient generated code. The whole
@@ -199,12 +200,7 @@ parse config source =
         -}
         parseComma : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseComma row rows startOffset endOffset =
-            let
-                first : String
-                first =
-                    String.slice endOffset (endOffset + 1) source
-            in
-            if first == "" then
+            if endOffset - finalLength >= 0 then
                 let
                     finalField : String
                     finalField =
@@ -216,74 +212,75 @@ parse config source =
                 else
                     Ok (List.reverse (List.reverse (finalField :: row) :: rows))
 
-            else if first == "," then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseComma
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if first == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseComma
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 2
-                in
-                parseComma
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField (\c -> c == ",") "" newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseComma (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseComma
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first : String
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if first == "," then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseComma
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseComma
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseComma
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField (\c -> c == ",") "" newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseComma (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseComma
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
 
         parseSemicolon : List String -> List (List String) -> Int -> Int -> Result Problem (List (List String))
         parseSemicolon row rows startOffset endOffset =
-            let
-                first : String
-                first =
-                    String.slice endOffset (endOffset + 1) source
-            in
-            if first == "" then
+            if endOffset - finalLength >= 0 then
                 let
                     finalField : String
                     finalField =
@@ -295,65 +292,71 @@ parse config source =
                 else
                     Ok (List.reverse (List.reverse (finalField :: row) :: rows))
 
-            else if first == ";" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseSemicolon
-                    (String.slice startOffset endOffset source :: row)
-                    rows
-                    newPos
-                    newPos
-
-            else if first == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                parseSemicolon
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 2
-                in
-                parseSemicolon
-                    []
-                    (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
-                    newPos
-                    newPos
-
-            else if first == "\"" then
-                let
-                    newPos : Int
-                    newPos =
-                        endOffset + 1
-                in
-                case parseQuotedField (\c -> c == ";") "" newPos newPos of
-                    Ok ( value, afterQuotedField ) ->
-                        if afterQuotedField >= finalLength then
-                            Ok (List.reverse (List.reverse (value :: row) :: rows))
-
-                        else
-                            parseSemicolon (value :: row) rows afterQuotedField afterQuotedField
-
-                    Err problem ->
-                        Err (problem (List.length rows + 1))
-
             else
-                parseSemicolon
-                    row
-                    rows
-                    startOffset
-                    (endOffset + 1)
+                let
+                    first : String
+                    first =
+                        String.slice endOffset (endOffset + 1) source
+                in
+                if first == ";" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseSemicolon
+                        (String.slice startOffset endOffset source :: row)
+                        rows
+                        newPos
+                        newPos
+
+                else if first == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    parseSemicolon
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\u{000D}" && String.slice (endOffset + 1) (endOffset + 2) source == "\n" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 2
+                    in
+                    parseSemicolon
+                        []
+                        (List.reverse (String.slice startOffset endOffset source :: row) :: rows)
+                        newPos
+                        newPos
+
+                else if first == "\"" then
+                    let
+                        newPos : Int
+                        newPos =
+                            endOffset + 1
+                    in
+                    case parseQuotedField (\c -> c == ";") "" newPos newPos of
+                        Ok ( value, afterQuotedField ) ->
+                            if afterQuotedField >= finalLength then
+                                Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else
+                                parseSemicolon (value :: row) rows afterQuotedField afterQuotedField
+
+                        Err problem ->
+                            Err (problem (List.length rows + 1))
+
+                else
+                    parseSemicolon
+                        row
+                        rows
+                        startOffset
+                        (endOffset + 1)
     in
     if String.isEmpty source then
         Ok []
