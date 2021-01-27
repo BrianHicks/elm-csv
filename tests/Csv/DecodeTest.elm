@@ -35,6 +35,11 @@ intTest =
                 "1"
                     |> Decode.decodeCsv NoFieldNames (Decode.column 0 Decode.int)
                     |> Expect.equal (Ok [ 1 ])
+        , test "an integer with spaces around" <|
+            \_ ->
+                " 1 "
+                    |> Decode.decodeCsv NoFieldNames (Decode.column 0 Decode.int)
+                    |> Expect.equal (Ok [ 1 ])
         , test "an invalid integer" <|
             \_ ->
                 "a"
@@ -61,6 +66,11 @@ floatTest =
         , test "a float shaped like a floating-point number" <|
             \_ ->
                 "3.14"
+                    |> Decode.decodeCsv NoFieldNames (Decode.column 0 Decode.float)
+                    |> Expect.equal (Ok [ 3.14 ])
+        , test "a float with spaces around" <|
+            \_ ->
+                " 3.14 "
                     |> Decode.decodeCsv NoFieldNames (Decode.column 0 Decode.float)
                     |> Expect.equal (Ok [ 3.14 ])
         , test "an invalid float" <|

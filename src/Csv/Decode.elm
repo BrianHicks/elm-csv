@@ -83,11 +83,13 @@ string =
     Decoder (Tuple.second >> getOnly Ok)
 
 
-{-| Decode an integer from a CSV.
+{-| Decode an integer from a CSV. The spaces around are removed.
 
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "-1" --> Ok [ -1 ]
+
+    decodeCsv NoFieldNames int " 1 " --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
@@ -105,7 +107,7 @@ int =
         (Tuple.second
             >> getOnly
                 (\value ->
-                    case String.toInt value of
+                    case String.toInt (String.trim value) of
                         Just parsed ->
                             Ok parsed
 
@@ -115,11 +117,13 @@ int =
         )
 
 
-{-| Decode a float from a CSV.
+{-| Decode a float from a CSV. The spaces around are removed.
 
     decodeCsv NoFieldNames float "3" --> Ok [ 3.0 ]
 
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
+
+    decodeCsv NoFieldNames float " 3 " --> Ok [ 3.0 ]
 
     decodeCsv NoFieldNames float "mimesis"
     --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
@@ -137,7 +141,7 @@ float =
         (Tuple.second
             >> getOnly
                 (\value ->
-                    case String.toFloat value of
+                    case String.toFloat (String.trim value) of
                         Just parsed ->
                             Ok parsed
 
