@@ -67,12 +67,6 @@ type Decoder a
     = Decoder (Location -> Dict String Int -> List String -> Result Problem a)
 
 
-type Location
-    = Column Int
-    | Field String
-    | Only
-
-
 fromString : (String -> Result Problem a) -> Decoder a
 fromString convert =
     Decoder <|
@@ -201,21 +195,14 @@ blank decoder =
         string
 
 
-getOnly : (String -> Result Problem a) -> List String -> Result Problem a
-getOnly transform row =
-    case row of
-        [] ->
-            Err (ExpectedColumn 0)
-
-        [ only ] ->
-            transform only
-
-        _ ->
-            Err AmbiguousColumn
-
-
 
 -- LOCATIONS
+
+
+type Location
+    = Column Int
+    | Field String
+    | Only
 
 
 {-| Parse a value at a numbered column in the CSV, starting from 0.
@@ -347,6 +334,7 @@ decodeCustom config fieldNames decoder source =
 applyDecoder : FieldNames -> Decoder a -> List (List String) -> Result Error (List a)
 applyDecoder fieldNames (Decoder decode) allRows =
     let
+        defaultLocation : Location
         defaultLocation =
             Only
     in
