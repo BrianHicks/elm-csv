@@ -115,8 +115,6 @@ int =
 
 {-| Decode a float from a CSV.
 
-    decodeCsv NoFieldNames float "3" --> Ok [ 3.0 ]
-
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
 
     decodeCsv NoFieldNames float "mimesis"
