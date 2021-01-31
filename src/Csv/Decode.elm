@@ -83,13 +83,11 @@ string =
     Decoder (Tuple.second >> getOnly Ok)
 
 
-{-| Decode an integer from a CSV. The spaces around are removed.
+{-| Decode an integer from a CSV.
 
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "-1" --> Ok [ -1 ]
-
-    decodeCsv NoFieldNames int " 1 " --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
@@ -117,13 +115,11 @@ int =
         )
 
 
-{-| Decode a float from a CSV. The spaces around are removed.
+{-| Decode a float from a CSV.
 
     decodeCsv NoFieldNames float "3" --> Ok [ 3.0 ]
 
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
-
-    decodeCsv NoFieldNames float " 3 " --> Ok [ 3.0 ]
 
     decodeCsv NoFieldNames float "mimesis"
     --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
