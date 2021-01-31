@@ -97,7 +97,7 @@ fromString convert =
                                     Err (ExpectedColumn colNum)
 
                         Nothing ->
-                            Err (ExpectedField name)
+                            Err (FieldNotPresent name)
 
                 Only ->
                     case row of
@@ -258,7 +258,7 @@ to provide these names, see [`FieldNames`](#FieldNames)
         (CustomFieldNames [ "Constant" ])
         (field "Nonexistent" float)
         "3.14"
-    --> Err (DecodingError { row = 0, problem = ExpectedField "Nonexistent" })
+    --> Err (DecodingError { row = 0, problem = FieldNotPresent "Nonexistent" })
 
 -}
 field : String -> Decoder a -> Decoder a
@@ -412,6 +412,7 @@ type Error
 -}
 type Problem
     = NoFieldNamesOnFirstRow
+    | FieldNotPresent String
     | ExpectedColumn Int
     | ExpectedField String
     | AmbiguousColumn
@@ -439,6 +440,9 @@ errorToString error =
                     case problem of
                         NoFieldNamesOnFirstRow ->
                             [ "I expected to see field names on the first row, but there were none." ]
+
+                        FieldNotPresent name ->
+                            [ "I looked for a column named `" ++ name ++ "`, but it was not provided in the field names." ]
 
                         ExpectedColumn i ->
                             [ "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist." ]

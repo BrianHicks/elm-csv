@@ -139,7 +139,7 @@ fieldTest =
                 "a"
                     |> Decode.decodeCsv NoFieldNames (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 0, problem = Decode.FieldNotPresent "Name" }))
         , test "does not work when the provided headers don't contain the name" <|
             \_ ->
                 "a"
@@ -147,7 +147,7 @@ fieldTest =
                         (CustomFieldNames [])
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 0, problem = Decode.FieldNotPresent "Name" }))
         , test "retrieves the field from custom-provided fields" <|
             \_ ->
                 "a"
@@ -162,7 +162,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 1, problem = Decode.FieldNotPresent "Name" }))
         , test "fails when there is no first row" <|
             \_ ->
                 ""
@@ -178,7 +178,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Name" }))
+                        (Err (DecodingError { row = 1, problem = Decode.FieldNotPresent "Name" }))
         , test "uses the headers on the first row, if present" <|
             \_ ->
                 "Name\u{000D}\nAtlas"
