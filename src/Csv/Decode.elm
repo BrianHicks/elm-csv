@@ -64,7 +64,51 @@ import Dict exposing (Dict)
 if you have a `Pet` data type, you'd want a `Decoder Pet`.
 -}
 type Decoder a
-    = Decoder (( Dict String Int, List String ) -> Result Problem a)
+    = Decoder (Location -> Dict String Int -> List String -> Result Problem a)
+
+
+type Location
+    = Column Int
+    | Field String
+    | Only
+
+
+fromString : (String -> Result Problem a) -> Decoder a
+fromString convert =
+    Decoder <|
+        \location fieldNames row ->
+            case location of
+                Column colNum ->
+                    case row |> List.drop colNum |> List.head of
+                        Just value ->
+                            convert value
+
+                        Nothing ->
+                            Err (ExpectedColumn colNum)
+
+                Field name ->
+                    case Dict.get name fieldNames of
+                        Just colNum ->
+                            case row |> List.drop colNum |> List.head of
+                                Just value ->
+                                    convert value
+
+                                Nothing ->
+                                    Err (ExpectedColumn colNum)
+
+                        Nothing ->
+                            Err (ExpectedField name)
+
+                Only ->
+                    case row of
+                        [] ->
+                            Err (ExpectedColumn 0)
+
+                        [ only ] ->
+                            convert only
+
+                        _ ->
+                            Err AmbiguousColumn
 
 
 {-| Decode a string from a CSV.
@@ -80,7 +124,7 @@ there is only one column in the CSV and try to decode that.
 -}
 string : Decoder String
 string =
-    Decoder (Tuple.second >> getOnly Ok)
+    fromString Ok
 
 
 {-| Decode an integer from a CSV.
@@ -99,18 +143,14 @@ there is only one column in the CSV and try to decode that.
 -}
 int : Decoder Int
 int =
-    Decoder
-        (Tuple.second
-            >> getOnly
-                (\value ->
-                    case String.toInt (String.trim value) of
-                        Just parsed ->
-                            Ok parsed
+    fromString <|
+        \value ->
+            case String.toInt (String.trim value) of
+                Just parsed ->
+                    Ok parsed
 
-                        Nothing ->
-                            Err (ExpectedInt value)
-                )
-        )
+                Nothing ->
+                    Err (ExpectedInt value)
 
 
 {-| Decode a float from a CSV.
@@ -129,18 +169,14 @@ there is only one column in the CSV and try to decode that.
 -}
 float : Decoder Float
 float =
-    Decoder
-        (Tuple.second
-            >> getOnly
-                (\value ->
-                    case String.toFloat (String.trim value) of
-                        Just parsed ->
-                            Ok parsed
+    fromString <|
+        \value ->
+            case String.toFloat (String.trim value) of
+                Just parsed ->
+                    Ok parsed
 
-                        Nothing ->
-                            Err (ExpectedFloat value)
-                )
-        )
+                Nothing ->
+                    Err (ExpectedFloat value)
 
 
 {-| Handle blank fields by making them into `Maybe`s.
@@ -194,14 +230,7 @@ getOnly transform row =
 -}
 column : Int -> Decoder a -> Decoder a
 column col (Decoder decoder) =
-    Decoder <|
-        \( names, row ) ->
-            case row |> List.drop col |> List.head of
-                Just value ->
-                    decoder ( names, [ value ] )
-
-                Nothing ->
-                    Err (ExpectedColumn col)
+    Decoder (\_ fieldNames row -> decoder (Column col) fieldNames row)
 
 
 {-| Parse a value at a named column in the CSV. There are a number of ways
@@ -234,15 +263,7 @@ to provide these names, see [`FieldNames`](#FieldNames)
 -}
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
-    Decoder <|
-        \( names, row ) ->
-            -- TODO: AHHHHHHHHHHHHH an array would be way better
-            case Dict.get name names |> Maybe.andThen (\col -> row |> List.drop col |> List.head) of
-                Just value ->
-                    decoder ( names, [ value ] )
-
-                Nothing ->
-                    Err (ExpectedField name)
+    Decoder (\_ fieldNames row -> decoder (Field name) fieldNames row)
 
 
 
@@ -325,14 +346,18 @@ decodeCustom config fieldNames decoder source =
 
 applyDecoder : FieldNames -> Decoder a -> List (List String) -> Result Error (List a)
 applyDecoder fieldNames (Decoder decode) allRows =
+    let
+        defaultLocation =
+            Only
+    in
     Result.andThen
-        (\( names, firstRowNumber, rows ) ->
+        (\( resolvedNames, firstRowNumber, rows ) ->
             rows
                 |> List.foldl
                     (\row ->
                         Result.andThen
                             (\( soFar, rowNum ) ->
-                                case decode ( names, row ) of
+                                case decode defaultLocation resolvedNames row of
                                     Ok val ->
                                         Ok ( val :: soFar, rowNum - 1 )
 
@@ -466,7 +491,7 @@ errorToString error =
 -}
 map : (from -> to) -> Decoder from -> Decoder to
 map transform (Decoder decoder) =
-    Decoder (decoder >> Result.map transform)
+    Decoder (\location fieldNames row -> decoder location fieldNames row |> Result.map transform)
 
 
 {-| Combine two decoders to make something else, for example a tuple:
@@ -483,10 +508,10 @@ map transform (Decoder decoder) =
 map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
 map2 transform (Decoder decodeA) (Decoder decodeB) =
     Decoder
-        (\row ->
+        (\location fieldNames row ->
             Result.map2 transform
-                (decodeA row)
-                (decodeB row)
+                (decodeA location fieldNames row)
+                (decodeB location fieldNames row)
         )
 
 
@@ -506,11 +531,11 @@ exist in this package. Use [`into`](#into) to decode records instead!
 map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
 map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
     Decoder
-        (\row ->
+        (\location fieldNames row ->
             Result.map3 transform
-                (decodeA row)
-                (decodeB row)
-                (decodeC row)
+                (decodeA location fieldNames row)
+                (decodeB location fieldNames row)
+                (decodeC location fieldNames row)
         )
 
 
@@ -578,13 +603,13 @@ oneOf first rest =
 recover : Decoder a -> Decoder a -> Decoder a
 recover (Decoder first) (Decoder second) =
     Decoder <|
-        \rowAndNames ->
-            case first rowAndNames of
+        \location fieldNames row ->
+            case first location fieldNames row of
                 Ok value ->
                     Ok value
 
                 Err problem ->
-                    case second rowAndNames of
+                    case second location fieldNames row of
                         Ok value ->
                             Ok value
 
@@ -596,7 +621,7 @@ recover (Decoder first) (Decoder second) =
 -}
 succeed : a -> Decoder a
 succeed value =
-    Decoder (\_ -> Ok value)
+    Decoder (\_ _ _ -> Ok value)
 
 
 {-| Always fail with the given message, no matter what. Mostly useful with
@@ -604,7 +629,7 @@ succeed value =
 -}
 fail : String -> Decoder a
 fail message =
-    Decoder (\_ -> Err (Failure message))
+    Decoder (\_ _ _ -> Err (Failure message))
 
 
 {-| Decode some value _and then_ make a decoding decision based on the
@@ -634,15 +659,15 @@ You could then use it like this:
 andThen : (a -> Decoder b) -> Decoder a -> Decoder b
 andThen next (Decoder first) =
     Decoder
-        (\row ->
-            first row
+        (\location fieldNames row ->
+            first location fieldNames row
                 |> Result.andThen
                     (\nextValue ->
                         let
                             (Decoder final) =
                                 next nextValue
                         in
-                        final row
+                        final location fieldNames row
                     )
         )
 
