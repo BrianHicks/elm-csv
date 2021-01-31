@@ -87,8 +87,6 @@ string =
 
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
-    decodeCsv NoFieldNames int "-1" --> Ok [ -1 ]
-
     decodeCsv NoFieldNames int "volcano"
     --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
 
