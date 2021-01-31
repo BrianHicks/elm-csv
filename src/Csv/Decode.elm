@@ -64,13 +64,13 @@ import Dict exposing (Dict)
 if you have a `Pet` data type, you'd want a `Decoder Pet`.
 -}
 type Decoder a
-    = Decoder (Location -> Dict String Int -> List String -> Result Problem a)
+    = Decoder (Location -> Dict String Int -> Int -> List String -> Result Problem a)
 
 
 fromString : (String -> Result Problem a) -> Decoder a
 fromString convert =
     Decoder <|
-        \location fieldNames row ->
+        \location fieldNames rowNum row ->
             case location of
                 Column colNum ->
                     case row |> List.drop colNum |> List.head of
@@ -345,7 +345,7 @@ applyDecoder fieldNames (Decoder decode) allRows =
                     (\row ->
                         Result.andThen
                             (\( soFar, rowNum ) ->
-                                case decode defaultLocation resolvedNames row of
+                                case decode defaultLocation resolvedNames rowNum row of
                                     Ok val ->
                                         Ok ( val :: soFar, rowNum - 1 )
 
@@ -483,7 +483,7 @@ errorToString error =
 -}
 map : (from -> to) -> Decoder from -> Decoder to
 map transform (Decoder decoder) =
-    Decoder (\location fieldNames row -> decoder location fieldNames row |> Result.map transform)
+    Decoder (\location fieldNames rowNum row -> decoder location fieldNames rowNum row |> Result.map transform)
 
 
 {-| Combine two decoders to make something else, for example a tuple:
@@ -500,10 +500,10 @@ map transform (Decoder decoder) =
 map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
 map2 transform (Decoder decodeA) (Decoder decodeB) =
     Decoder
-        (\location fieldNames row ->
+        (\location fieldNames rowNum row ->
             Result.map2 transform
-                (decodeA location fieldNames row)
-                (decodeB location fieldNames row)
+                (decodeA location fieldNames rowNum row)
+                (decodeB location fieldNames rowNum row)
         )
 
 
@@ -523,11 +523,11 @@ exist in this package. Use [`into`](#into) to decode records instead!
 map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
 map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
     Decoder
-        (\location fieldNames row ->
+        (\location fieldNames rowNum row ->
             Result.map3 transform
-                (decodeA location fieldNames row)
-                (decodeB location fieldNames row)
-                (decodeC location fieldNames row)
+                (decodeA location fieldNames rowNum row)
+                (decodeB location fieldNames rowNum row)
+                (decodeC location fieldNames rowNum row)
         )
 
 
@@ -595,13 +595,13 @@ oneOf first rest =
 recover : Decoder a -> Decoder a -> Decoder a
 recover (Decoder first) (Decoder second) =
     Decoder <|
-        \location fieldNames row ->
-            case first location fieldNames row of
+        \location fieldNames rowNum row ->
+            case first location fieldNames rowNum row of
                 Ok value ->
                     Ok value
 
                 Err problem ->
-                    case second location fieldNames row of
+                    case second location fieldNames rowNum row of
                         Ok value ->
                             Ok value
 
@@ -613,7 +613,7 @@ recover (Decoder first) (Decoder second) =
 -}
 succeed : a -> Decoder a
 succeed value =
-    Decoder (\_ _ _ -> Ok value)
+    Decoder (\_ _ _ _ -> Ok value)
 
 
 {-| Always fail with the given message, no matter what. Mostly useful with
@@ -621,7 +621,7 @@ succeed value =
 -}
 fail : String -> Decoder a
 fail message =
-    Decoder (\_ _ _ -> Err (Failure message))
+    Decoder (\_ _ _ _ -> Err (Failure message))
 
 
 {-| Decode some value _and then_ make a decoding decision based on the
@@ -651,15 +651,15 @@ You could then use it like this:
 andThen : (a -> Decoder b) -> Decoder a -> Decoder b
 andThen next (Decoder first) =
     Decoder
-        (\location fieldNames row ->
-            first location fieldNames row
+        (\location fieldNames rowNum row ->
+            first location fieldNames rowNum row
                 |> Result.andThen
                     (\nextValue ->
                         let
                             (Decoder final) =
                                 next nextValue
                         in
-                        final location fieldNames row
+                        final location fieldNames rowNum row
                     )
         )
 
