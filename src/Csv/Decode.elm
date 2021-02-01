@@ -88,7 +88,7 @@ fromString convert =
                                     convert value
 
                                 Nothing ->
-                                    Err (ExpectedColumn colNum)
+                                    Err (ExpectedField name)
 
                         Nothing ->
                             Err (FieldNotPresent name)

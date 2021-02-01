@@ -179,6 +179,14 @@ fieldTest =
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 1, problem = Decode.FieldNotPresent "Name" }))
+        , test "fails when the associated column is not present in the row" <|
+            \_ ->
+                "Name,Other\u{000D}\nAtlas"
+                    |> Decode.decodeCsv
+                        FieldNamesFromFirstRow
+                        (Decode.field "Other" Decode.string)
+                    |> Expect.equal
+                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Other" }))
         , test "uses the headers on the first row, if present" <|
             \_ ->
                 "Name\u{000D}\nAtlas"
