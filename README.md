@@ -88,15 +88,6 @@ This should not require so much thought!
 The second thing, and the one that prompted me to finally do something about this, is that none of the libraries available implement `andThen`.
 Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine make decoding decisions dependent on the fields you see.
 
-### What about encoding CSVs?
-
-That's something I'd like to add!
-Probably even in the 1.x line, if possible!
-The thing is, I'm writing this to fix a specific problem (decoding) and I want to release 1.0.0 and move on to using it to fix the problem.
-
-It'd be a nice thing to contribute!
-But open an issue to talk about the API first, OK?
-
 ## Contributing
 
 This project uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
