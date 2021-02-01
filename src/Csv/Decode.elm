@@ -102,7 +102,7 @@ fromString convert =
                             Err
                                 { row = rowNum
                                 , column = locationToColumn fieldNames location
-                                , problems = [ ExpectedColumn colNum ]
+                                , problems = [ ColumnNotFound colNum ]
                                 }
 
                 Field_ name ->
@@ -125,14 +125,14 @@ fromString convert =
                                     Err
                                         { row = rowNum
                                         , column = locationToColumn fieldNames location
-                                        , problems = [ ExpectedField name ]
+                                        , problems = [ FieldNotFound name ]
                                         }
 
                         Nothing ->
                             Err
                                 { row = rowNum
                                 , column = locationToColumn fieldNames location
-                                , problems = [ FieldNotPresent name ]
+                                , problems = [ FieldNotProvided name ]
                                 }
 
                 OnlyColumn_ ->
@@ -141,7 +141,7 @@ fromString convert =
                             Err
                                 { row = rowNum
                                 , column = locationToColumn fieldNames location
-                                , problems = [ ExpectedColumn 0 ]
+                                , problems = [ ColumnNotFound 0 ]
                                 }
 
                         [ only ] ->
@@ -160,7 +160,7 @@ fromString convert =
                             Err
                                 { row = rowNum
                                 , column = locationToColumn fieldNames location
-                                , problems = [ AmbiguousColumn (List.length row) ]
+                                , problems = [ ExpectedOneColumn (List.length row) ]
                                 }
 
 
@@ -176,7 +176,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingErrors
     -->         [ { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           , problems = [ ExpectedOneColumn 2 ]
     -->           }
     -->         ]
     -->     )
@@ -209,7 +209,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingErrors
     -->         [ { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           , problems = [ ExpectedOneColumn 2 ]
     -->           }
     -->         ]
     -->     )
@@ -249,7 +249,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingErrors
     -->         [ { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           , problems = [ ExpectedOneColumn 2 ]
     -->           }
     -->         ]
     -->     )
@@ -305,7 +305,7 @@ type Location
     -->     (DecodingErrors
     -->         [ { row = 0
     -->           , column = Column 100
-    -->           , problems = [ ExpectedColumn 100 ]
+    -->           , problems = [ ColumnNotFound 100 ]
     -->           }
     -->         ]
     -->     )
@@ -345,7 +345,7 @@ to provide these names, see [`FieldNames`](#FieldNames)
     -->     (DecodingErrors
     -->         [ { row = 0
     -->           , column = Field "Nonexistent" Nothing
-    -->           , problems = [ FieldNotPresent "Nonexistent" ]
+    -->           , problems = [ FieldNotProvided "Nonexistent" ]
     -->           }
     -->         ]
     -->     )
@@ -479,10 +479,12 @@ need to present this to someone, you can get a human-readable version with
 
 Some more detail:
 
-  - `ConfigError`: `decodeCustom` got a bad separator character
   - `ParsingError`: there was a problem parsing the data (the most common issue
     is problems with quoted fields. Check that any quoted fields are closed
     and that quotes are escaped by doubling.)
+  - `NoFieldNamesOnFirstRow`: we tried to get the field names from the first
+    row (using [`FieldNames`](#FieldNames)) but couldn't find any, probably
+    because the input was blank.
   - `DecodingErrors`: we couldn't decode a value using the specified
     decoder. See [`Problem`](#Problem) for more details.
 
@@ -528,29 +530,28 @@ locationToColumn fieldNames location =
 
 {-| Things that went wrong specifically while decoding.
 
-  - `NoFieldNamesOnFirstRow`: we tried to get the field names from the first
-    row (using [`FieldNames`](#FieldNames)) but couldn't find any, probably
-    because the input was blank.
-  - `ExpectedColumn Int` and `ExpectedField String`: we looked for a value
+  - `ColumnNotFound Int` and `FieldNotFound String`: we looked for a value
     at a specific column, but couldn't find it. The argument specifies where
     we tried to look.
-  - `AmbiguousColumn Int`: basic decoders expect to find a single value. If
-    there are multiple fields in a row, and you don't specify which one
-    to use with [`column`](#column) or [`field`](#field), you'll get this
-    error. The argument says how many columns we found.
+  - `FieldNotProvided String`: we looked for a specific field, but it wasn't
+    present in the first row or the provided field names (depending on your
+    configuration.)
+  - `ExpectedOneColumn Int`: basic decoders like [`string`](#string) and
+    [`int`](#int) expect to find a single column per row. If there are multiple
+    columns, and you don't specify which to use with [`column`](#column)
+    or [`field`](#field), you'll get this error. The argument says how many
+    columns we found.
   - `ExpectedInt String` and `ExpectedFloat String`: we tried to parse a
     string into a number, but couldn't. The arguments specify the strings
     we got.
   - `Failure`: messages from [`fail`](#fail) end up here.
-  - `ManyProblems`: when there are multiple failures, messages from
-    [`oneOf`](#oneOf) end up here.
 
 -}
 type Problem
-    = FieldNotPresent String
-    | ExpectedColumn Int
-    | ExpectedField String
-    | AmbiguousColumn Int
+    = ColumnNotFound Int
+    | FieldNotFound String
+    | FieldNotProvided String
+    | ExpectedOneColumn Int
     | ExpectedInt String
     | ExpectedFloat String
     | Failure String
@@ -575,16 +576,16 @@ errorToString error =
                 problemString : Problem -> String
                 problemString problem =
                     case problem of
-                        FieldNotPresent name ->
-                            "The `" ++ name ++ "` field wasn't provided in the field names."
-
-                        ExpectedColumn i ->
+                        ColumnNotFound i ->
                             "I couldn't find column #" ++ String.fromInt i ++ "."
 
-                        ExpectedField name ->
+                        FieldNotFound name ->
                             "I couldn't find the `" ++ name ++ "` column."
 
-                        AmbiguousColumn howMany ->
+                        FieldNotProvided name ->
+                            "The `" ++ name ++ "` field wasn't provided in the field names."
+
+                        ExpectedOneColumn howMany ->
                             "I expected exactly one column, but there were " ++ String.fromInt howMany ++ "."
 
                         ExpectedInt notInt ->

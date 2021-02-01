@@ -144,7 +144,7 @@ columnTest =
                             (DecodingErrors
                                 [ { row = 0
                                   , column = Column 1
-                                  , problems = [ Decode.ExpectedColumn 1 ]
+                                  , problems = [ Decode.ColumnNotFound 1 ]
                                   }
                                 ]
                             )
@@ -164,7 +164,7 @@ fieldTest =
                             (DecodingErrors
                                 [ { row = 0
                                   , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotPresent "Name" ]
+                                  , problems = [ Decode.FieldNotProvided "Name" ]
                                   }
                                 ]
                             )
@@ -180,7 +180,7 @@ fieldTest =
                             (DecodingErrors
                                 [ { row = 0
                                   , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotPresent "Name" ]
+                                  , problems = [ Decode.FieldNotProvided "Name" ]
                                   }
                                 ]
                             )
@@ -196,7 +196,7 @@ fieldTest =
                             (DecodingErrors
                                 [ { row = 1
                                   , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotPresent "Name" ]
+                                  , problems = [ Decode.FieldNotProvided "Name" ]
                                   }
                                 ]
                             )
@@ -219,7 +219,7 @@ fieldTest =
                             (DecodingErrors
                                 [ { row = 1
                                   , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotPresent "Name" ]
+                                  , problems = [ Decode.FieldNotProvided "Name" ]
                                   }
                                 ]
                             )
@@ -235,7 +235,7 @@ fieldTest =
                             (DecodingErrors
                                 [ { row = 1
                                   , column = Field "Other" (Just 1)
-                                  , problems = [ Decode.ExpectedField "Other" ]
+                                  , problems = [ Decode.FieldNotFound "Other" ]
                                   }
                                 ]
                             )
@@ -475,7 +475,7 @@ andThenTest =
                                 (DecodingErrors
                                     [ { row = 0
                                       , column = Column 3
-                                      , problems = [ Decode.ExpectedColumn 3 ]
+                                      , problems = [ Decode.ColumnNotFound 3 ]
                                       }
                                     ]
                                 )
