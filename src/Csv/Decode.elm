@@ -575,43 +575,62 @@ errorToString error =
                 problemString problem =
                     case problem of
                         FieldNotPresent name ->
-                            "I looked for a column named `" ++ name ++ "`, but it was not provided in the field names."
+                            "The `" ++ name ++ "` field wasn't provided in the field names."
 
                         ExpectedColumn i ->
-                            "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
+                            "I couldn't find column #" ++ String.fromInt i ++ "."
 
                         ExpectedField name ->
-                            "I looked for a column named `" ++ name ++ "`, but couldn't find one."
+                            "I couldn't find the `" ++ name ++ "` column."
 
                         AmbiguousColumn howMany ->
-                            "I needed there to be exactly one column, but there were " ++ String.fromInt howMany ++ "."
+                            "I expected exactly one column, but there were " ++ String.fromInt howMany ++ "."
 
                         ExpectedInt notInt ->
-                            "I expected to parse an int from `" ++ notInt ++ "`, but couldn't."
+                            "I could not parse an int from `" ++ notInt ++ "`."
 
                         ExpectedFloat notFloat ->
-                            "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't."
+                            "I could not parse a float from `" ++ notFloat ++ "`."
 
                         Failure custom ->
                             custom
+
+                rowAndColumnString : { a | row : Int, column : Column } -> String
+                rowAndColumnString err =
+                    "row "
+                        ++ String.fromInt err.row
+                        ++ ", "
+                        ++ (case err.column of
+                                Column col ->
+                                    "column " ++ String.fromInt col
+
+                                Field name Nothing ->
+                                    "in the `" ++ name ++ "` field"
+
+                                Field name (Just col) ->
+                                    "in the `" ++ name ++ "` field (column " ++ String.fromInt col ++ ")"
+
+                                OnlyColumn ->
+                                    "column 0 (the only column present)"
+                           )
 
                 errString : { row : Int, column : Column, problems : List Problem } -> String
                 errString err =
                     case List.map problemString err.problems of
                         [] ->
-                            "There was an internal error while generating an error on row "
-                                ++ String.fromInt err.row
+                            "There was an internal error while generating an error on "
+                                ++ rowAndColumnString err
                                 ++ " and I don't have any info about what went wrong. Please open an issue!"
 
                         [ only ] ->
-                            "There was a problem on row "
-                                ++ String.fromInt err.row
+                            "There was a problem on "
+                                ++ rowAndColumnString err
                                 ++ ": "
                                 ++ only
 
                         many ->
-                            "There were some problems on row "
-                                ++ String.fromInt err.row
+                            "There were some problems on "
+                                ++ rowAndColumnString err
                                 ++ ":\n\n"
                                 ++ String.join "\n" (List.map (\problem -> " - " ++ problem) many)
             in
