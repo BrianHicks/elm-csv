@@ -179,13 +179,6 @@ fieldTest =
                                 }
                             )
                         )
-        , test "retrieves the field from custom-provided fields" <|
-            \_ ->
-                "a"
-                    |> Decode.decodeCsv
-                        (CustomFieldNames [ "Name" ])
-                        (Decode.field "Name" Decode.string)
-                    |> Expect.equal (Ok [ "a" ])
         , test "fails when the first row doesn't contain the name" <|
             \_ ->
                 "Blah\u{000D}\na"
@@ -246,6 +239,13 @@ fieldTest =
                                 }
                             )
                         )
+        , test "retrieves the field from custom-provided fields" <|
+            \_ ->
+                "a"
+                    |> Decode.decodeCsv
+                        (CustomFieldNames [ "Name" ])
+                        (Decode.field "Name" Decode.string)
+                    |> Expect.equal (Ok [ "a" ])
         , test "uses the headers on the first row, if present" <|
             \_ ->
                 "Name\u{000D}\nAtlas"
