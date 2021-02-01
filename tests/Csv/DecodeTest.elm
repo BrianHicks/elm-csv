@@ -200,15 +200,7 @@ fieldTest =
                     |> Decode.decodeCsv
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
-                    |> Expect.equal
-                        (Err
-                            (DecodingError
-                                { row = 0
-                                , column = Column 0
-                                , problems = [ Decode.NoFieldNamesOnFirstRow ]
-                                }
-                            )
-                        )
+                    |> Expect.equal (Err Decode.NoFieldNamesOnFirstRow)
         , test "fails when name is not present in the first row" <|
             \_ ->
                 "Bad\u{000D}\nAtlas"

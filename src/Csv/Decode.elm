@@ -393,15 +393,7 @@ getFieldNames headers rows =
         FieldNamesFromFirstRow ->
             case rows of
                 [] ->
-                    -- TODO: this seems like it'd be a better top-level member
-                    -- of Error than an instance of DecodingError
-                    Err
-                        (DecodingError
-                            { row = 0
-                            , column = Column 0
-                            , problems = [ NoFieldNamesOnFirstRow ]
-                            }
-                        )
+                    Err NoFieldNamesOnFirstRow
 
                 first :: rest ->
                     Ok ( fromList (List.map String.trim first), 1, rest )
@@ -480,6 +472,7 @@ Some more detail:
 -}
 type Error
     = ParsingError Parser.Problem
+    | NoFieldNamesOnFirstRow
     | DecodingError
         { row : Int
         , column : Column
@@ -526,8 +519,7 @@ locationToColumn fieldNames location =
 
 -}
 type Problem
-    = NoFieldNamesOnFirstRow
-    | FieldNotPresent String
+    = FieldNotPresent String
     | ExpectedColumn Int
     | ExpectedField String
       -- TODO: take an integer with how many fields we got
@@ -548,14 +540,14 @@ errorToString error =
         ParsingError (Parser.AdditionalCharactersAfterClosingQuote row) ->
             "On row " ++ String.fromInt row ++ " in the source, there were additional characters in a field after a closing quote."
 
+        NoFieldNamesOnFirstRow ->
+            "I expected to see field names on the first row, but there were none."
+
         DecodingError err ->
             let
                 problemString : Problem -> String
                 problemString problem =
                     case problem of
-                        NoFieldNamesOnFirstRow ->
-                            "I expected to see field names on the first row, but there were none."
-
                         FieldNotPresent name ->
                             "I looked for a column named `" ++ name ++ "`, but it was not provided in the field names."
 
