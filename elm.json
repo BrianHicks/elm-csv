@@ -6,6 +6,7 @@
     "version": "2.0.1",
     "exposed-modules": [
         "Csv.Decode",
+        "Csv.Encode",
         "Csv.Parser"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
