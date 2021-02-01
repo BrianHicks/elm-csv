@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float, blank
     , column, field
-    , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Problem(..)
+    , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
     , oneOf, succeed, fail, andThen, fromResult, fromMaybe
     )
@@ -38,7 +38,7 @@ Figuring out how you'd write an equivalent JSON decoder may help!
 
 ## Running Decoders
 
-@docs FieldNames, decodeCsv, decodeCustom, Error, errorToString, Problem
+@docs FieldNames, decodeCsv, decodeCustom, Error, errorToString, Column, Problem
 
 
 ## Transforming Values
@@ -64,7 +64,19 @@ import Dict exposing (Dict)
 if you have a `Pet` data type, you'd want a `Decoder Pet`.
 -}
 type Decoder a
-    = Decoder (Location -> Dict String Int -> Int -> List String -> Result { row : Int, problems : List Problem } a)
+    = Decoder
+        (Location
+         -> Dict String Int
+         -> Int
+         -> List String
+         ->
+            Result
+                { row : Int
+                , column : Column
+                , problems : List Problem
+                }
+                a
+        )
 
 
 fromString : (String -> Result Problem a) -> Decoder a
@@ -72,7 +84,7 @@ fromString convert =
     Decoder <|
         \location fieldNames rowNum row ->
             case location of
-                Column colNum ->
+                Column_ colNum ->
                     case row |> List.drop colNum |> List.head of
                         Just value ->
                             case convert value of
@@ -80,12 +92,20 @@ fromString convert =
                                     Ok converted
 
                                 Err problem ->
-                                    Err { row = rowNum, problems = [ problem ] }
+                                    Err
+                                        { row = rowNum
+                                        , column = columnFromLocation location
+                                        , problems = [ problem ]
+                                        }
 
                         Nothing ->
-                            Err { row = rowNum, problems = [ ExpectedColumn colNum ] }
+                            Err
+                                { row = rowNum
+                                , column = columnFromLocation location
+                                , problems = [ ExpectedColumn colNum ]
+                                }
 
-                Field name ->
+                Field_ name ->
                     case Dict.get name fieldNames of
                         Just colNum ->
                             case row |> List.drop colNum |> List.head of
@@ -95,18 +115,34 @@ fromString convert =
                                             Ok converted
 
                                         Err problem ->
-                                            Err { row = rowNum, problems = [ problem ] }
+                                            Err
+                                                { row = rowNum
+                                                , column = columnFromLocation location
+                                                , problems = [ problem ]
+                                                }
 
                                 Nothing ->
-                                    Err { row = rowNum, problems = [ ExpectedField name ] }
+                                    Err
+                                        { row = rowNum
+                                        , column = columnFromLocation location
+                                        , problems = [ ExpectedField name ]
+                                        }
 
                         Nothing ->
-                            Err { row = rowNum, problems = [ FieldNotPresent name ] }
+                            Err
+                                { row = rowNum
+                                , column = columnFromLocation location
+                                , problems = [ FieldNotPresent name ]
+                                }
 
-                Only ->
+                OnlyColumn_ ->
                     case row of
                         [] ->
-                            Err { row = rowNum, problems = [ ExpectedColumn 0 ] }
+                            Err
+                                { row = rowNum
+                                , column = columnFromLocation location
+                                , problems = [ ExpectedColumn 0 ]
+                                }
 
                         [ only ] ->
                             case convert only of
@@ -114,10 +150,18 @@ fromString convert =
                                     Ok converted
 
                                 Err problem ->
-                                    Err { row = rowNum, problems = [ problem ] }
+                                    Err
+                                        { row = rowNum
+                                        , column = columnFromLocation location
+                                        , problems = [ problem ]
+                                        }
 
                         _ ->
-                            Err { row = rowNum, problems = [ AmbiguousColumn ] }
+                            Err
+                                { row = rowNum
+                                , column = columnFromLocation location
+                                , problems = [ AmbiguousColumn ]
+                                }
 
 
 {-| Decode a string from a CSV.
@@ -128,7 +172,13 @@ Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames string "a,b"
-    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = OnlyColumn
+    -->         , problems = [ AmbiguousColumn ]
+    -->         }
+    -->     )
 
 -}
 string : Decoder String
@@ -141,13 +191,25 @@ string =
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "volcano"
-    --> Err (DecodingError { row = 0, problems = [ ExpectedInt "volcano" ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = OnlyColumn
+    -->         , problems = [ ExpectedInt "volcano" ]
+    -->         }
+    -->     )
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames int "1,2"
-    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = OnlyColumn
+    -->         , problems = [ AmbiguousColumn ]
+    -->         }
+    -->     )
 
 -}
 int : Decoder Int
@@ -167,13 +229,25 @@ int =
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
 
     decodeCsv NoFieldNames float "mimesis"
-    --> Err (DecodingError { row = 0, problems = [ ExpectedFloat "mimesis" ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = OnlyColumn
+    -->         , problems = [ ExpectedFloat "mimesis" ]
+    -->         }
+    -->     )
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames float "1.0,2.0"
-    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = OnlyColumn
+    -->         , problems = [ AmbiguousColumn ]
+    -->         }
+    -->     )
 
 -}
 float : Decoder Float
@@ -212,9 +286,9 @@ blank decoder =
 
 
 type Location
-    = Column Int
-    | Field String
-    | Only
+    = Column_ Int
+    | Field_ String
+    | OnlyColumn_
 
 
 {-| Parse a value at a numbered column in the CSV, starting from 0.
@@ -222,12 +296,18 @@ type Location
     decodeCsv NoFieldNames (column 1 int) "1,2,3" --> Ok [ 2 ]
 
     decodeCsv NoFieldNames (column 100 float) "3.14"
-    --> Err (DecodingError { row = 0, problems = [ ExpectedColumn 100 ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = Column 100
+    -->         , problems = [ ExpectedColumn 100 ]
+    -->         }
+    -->     )
 
 -}
 column : Int -> Decoder a -> Decoder a
 column col (Decoder decoder) =
-    Decoder (\_ fieldNames row -> decoder (Column col) fieldNames row)
+    Decoder (\_ fieldNames row -> decoder (Column_ col) fieldNames row)
 
 
 {-| Parse a value at a named column in the CSV. There are a number of ways
@@ -255,12 +335,18 @@ to provide these names, see [`FieldNames`](#FieldNames)
         (CustomFieldNames [ "Constant" ])
         (field "Nonexistent" float)
         "3.14"
-    --> Err (DecodingError { row = 0, problems = [ FieldNotPresent "Nonexistent" ] })
+    --> Err
+    -->     (DecodingError
+    -->         { row = 0
+    -->         , column = Field "Nonexistent" Nothing
+    -->         , problems = [ FieldNotPresent "Nonexistent" ]
+    -->         }
+    -->     )
 
 -}
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
-    Decoder (\_ fieldNames row -> decoder (Field name) fieldNames row)
+    Decoder (\_ fieldNames row -> decoder (Field_ name) fieldNames row)
 
 
 
@@ -307,7 +393,15 @@ getFieldNames headers rows =
         FieldNamesFromFirstRow ->
             case rows of
                 [] ->
-                    Err (DecodingError { row = 0, problems = [ NoFieldNamesOnFirstRow ] })
+                    -- TODO: this seems like it'd be a better top-level member
+                    -- of Error than an instance of DecodingError
+                    Err
+                        (DecodingError
+                            { row = 0
+                            , column = Column 0
+                            , problems = [ NoFieldNamesOnFirstRow ]
+                            }
+                        )
 
                 first :: rest ->
                     Ok ( fromList (List.map String.trim first), 1, rest )
@@ -346,7 +440,7 @@ applyDecoder fieldNames (Decoder decode) allRows =
     let
         defaultLocation : Location
         defaultLocation =
-            Only
+            OnlyColumn_
     in
     Result.andThen
         (\( resolvedNames, firstRowNumber, rows ) ->
@@ -386,7 +480,30 @@ Some more detail:
 -}
 type Error
     = ParsingError Parser.Problem
-    | DecodingError { row : Int, problems : List Problem }
+    | DecodingError
+        { row : Int
+        , column : Column
+        , problems : List Problem
+        }
+
+
+type Column
+    = Column Int
+    | Field String (Maybe Int)
+    | OnlyColumn
+
+
+columnFromLocation : Location -> Column
+columnFromLocation location =
+    case location of
+        Column_ i ->
+            Column i
+
+        Field_ name ->
+            Field name Nothing
+
+        OnlyColumn_ ->
+            OnlyColumn
 
 
 {-| Things that went wrong specifically while decoding.
@@ -413,6 +530,7 @@ type Problem
     | FieldNotPresent String
     | ExpectedColumn Int
     | ExpectedField String
+      -- TODO: take an integer with how many fields we got
     | AmbiguousColumn
     | ExpectedInt String
     | ExpectedFloat String
@@ -627,7 +745,14 @@ succeed value =
 -}
 fail : String -> Decoder a
 fail message =
-    Decoder (\_ _ rowNum _ -> Err { row = rowNum, problems = [ Failure message ] })
+    Decoder
+        (\location _ rowNum _ ->
+            Err
+                { row = rowNum
+                , column = columnFromLocation location
+                , problems = [ Failure message ]
+                }
+        )
 
 
 {-| Decode some value _and then_ make a decoding decision based on the
