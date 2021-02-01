@@ -112,7 +112,7 @@ parseTest =
                             \_ ->
                                 ("\"a\"" ++ config.rowSeparator ++ "\"b\"")
                                     |> parse { fieldSeparator = config.fieldSeparator }
-                                    |> Expect.equal (Ok [ [ "a", "b" ] ])
+                                    |> Expect.equal (Ok [ [ "a" ], [ "b" ] ])
                         , test "a trailing newline should be ignored" <|
                             -- https://github.com/BrianHicks/elm-csv/issues/8
                             \_ ->

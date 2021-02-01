@@ -43,7 +43,7 @@ parse config source =
         finalLength =
             String.length source
 
-        parseQuotedField : (String -> Bool) -> String -> Int -> Int -> Result (Int -> Problem) ( String, Int )
+        parseQuotedField : (String -> Bool) -> String -> Int -> Int -> Result (Int -> Problem) ( String, Int, Bool )
         parseQuotedField isFieldSeparator soFar startOffset endOffset =
             if endOffset - finalLength >= 0 then
                 Err SourceEndedWithoutClosingQuote
@@ -58,6 +58,7 @@ parse config source =
                     Ok
                         ( soFar ++ segment
                         , endOffset + 1
+                        , False
                         )
 
                 else
@@ -79,16 +80,25 @@ parse config source =
                             newPos
                             newPos
 
-                    else if isFieldSeparator next || next == "\n" then
+                    else if isFieldSeparator next then
                         Ok
                             ( soFar ++ segment
                             , endOffset + 2
+                            , False
+                            )
+
+                    else if next == "\n" then
+                        Ok
+                            ( soFar ++ segment
+                            , endOffset + 2
+                            , True
                             )
 
                     else if next == "\u{000D}" && String.slice (endOffset + 2) (endOffset + 3) source == "\n" then
                         Ok
                             ( soFar ++ segment
                             , endOffset + 3
+                            , True
                             )
 
                     else
@@ -163,9 +173,12 @@ parse config source =
                             endOffset + 1
                     in
                     case parseQuotedField isFieldSeparator "" newPos newPos of
-                        Ok ( value, afterQuotedField ) ->
+                        Ok ( value, afterQuotedField, rowEnded ) ->
                             if afterQuotedField >= finalLength then
                                 Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else if rowEnded then
+                                parseHelp isFieldSeparator [] (List.reverse (value :: row) :: rows) afterQuotedField afterQuotedField
 
                             else
                                 parseHelp isFieldSeparator (value :: row) rows afterQuotedField afterQuotedField
@@ -261,9 +274,12 @@ parse config source =
                             endOffset + 1
                     in
                     case parseQuotedField (\c -> c == ",") "" newPos newPos of
-                        Ok ( value, afterQuotedField ) ->
+                        Ok ( value, afterQuotedField, rowEnded ) ->
                             if afterQuotedField >= finalLength then
                                 Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else if rowEnded then
+                                parseComma [] (List.reverse (value :: row) :: rows) afterQuotedField afterQuotedField
 
                             else
                                 parseComma (value :: row) rows afterQuotedField afterQuotedField
@@ -341,9 +357,12 @@ parse config source =
                             endOffset + 1
                     in
                     case parseQuotedField (\c -> c == ";") "" newPos newPos of
-                        Ok ( value, afterQuotedField ) ->
+                        Ok ( value, afterQuotedField, rowEnded ) ->
                             if afterQuotedField >= finalLength then
                                 Ok (List.reverse (List.reverse (value :: row) :: rows))
+
+                            else if rowEnded then
+                                parseSemicolon [] (List.reverse (value :: row) :: rows) afterQuotedField afterQuotedField
 
                             else
                                 parseSemicolon (value :: row) rows afterQuotedField afterQuotedField
