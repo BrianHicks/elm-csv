@@ -24,6 +24,20 @@ stringTest =
                 "1"
                     |> Decode.decodeCsv NoFieldNames Decode.string
                     |> Expect.equal (Ok [ "1" ])
+        , test "multiple columns" <|
+            \_ ->
+                "1,2"
+                    |> Decode.decodeCsv NoFieldNames Decode.string
+                    |> Expect.equal
+                        (Err
+                            (DecodingErrors
+                                [ { row = 0
+                                  , column = OnlyColumn
+                                  , problems = [ Decode.ExpectedOneColumn 2 ]
+                                  }
+                                ]
+                            )
+                        )
         ]
 
 
@@ -50,6 +64,20 @@ intTest =
                                 [ { row = 0
                                   , column = OnlyColumn
                                   , problems = [ Decode.ExpectedInt "a" ]
+                                  }
+                                ]
+                            )
+                        )
+        , test "multiple columns" <|
+            \_ ->
+                "1,2"
+                    |> Decode.decodeCsv NoFieldNames Decode.int
+                    |> Expect.equal
+                        (Err
+                            (DecodingErrors
+                                [ { row = 0
+                                  , column = OnlyColumn
+                                  , problems = [ Decode.ExpectedOneColumn 2 ]
                                   }
                                 ]
                             )
@@ -85,6 +113,20 @@ floatTest =
                                 [ { row = 0
                                   , column = OnlyColumn
                                   , problems = [ Decode.ExpectedFloat "a" ]
+                                  }
+                                ]
+                            )
+                        )
+        , test "multiple columns" <|
+            \_ ->
+                "1,2"
+                    |> Decode.decodeCsv NoFieldNames Decode.float
+                    |> Expect.equal
+                        (Err
+                            (DecodingErrors
+                                [ { row = 0
+                                  , column = OnlyColumn
+                                  , problems = [ Decode.ExpectedOneColumn 2 ]
                                   }
                                 ]
                             )
