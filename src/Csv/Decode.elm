@@ -173,11 +173,12 @@ there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames string "a,b"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn 2 ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = OnlyColumn
+    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           }
+    -->         ]
     -->     )
 
 -}
@@ -192,11 +193,12 @@ string =
 
     decodeCsv NoFieldNames int "volcano"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = OnlyColumn
-    -->         , problems = [ ExpectedInt "volcano" ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = OnlyColumn
+    -->           , problems = [ ExpectedInt "volcano" ]
+    -->           }
+    -->         ]
     -->     )
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
@@ -204,11 +206,12 @@ there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames int "1,2"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn 2 ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = OnlyColumn
+    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           }
+    -->         ]
     -->     )
 
 -}
@@ -230,11 +233,12 @@ int =
 
     decodeCsv NoFieldNames float "mimesis"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = OnlyColumn
-    -->         , problems = [ ExpectedFloat "mimesis" ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = OnlyColumn
+    -->           , problems = [ ExpectedFloat "mimesis" ]
+    -->           }
+    -->         ]
     -->     )
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
@@ -242,11 +246,12 @@ there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames float "1.0,2.0"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn 2 ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = OnlyColumn
+    -->           , problems = [ AmbiguousColumn 2 ]
+    -->           }
+    -->         ]
     -->     )
 
 -}
@@ -297,11 +302,12 @@ type Location
 
     decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = Column 100
-    -->         , problems = [ ExpectedColumn 100 ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = Column 100
+    -->           , problems = [ ExpectedColumn 100 ]
+    -->           }
+    -->         ]
     -->     )
 
 -}
@@ -336,11 +342,12 @@ to provide these names, see [`FieldNames`](#FieldNames)
         (field "Nonexistent" float)
         "3.14"
     --> Err
-    -->     (DecodingError
-    -->         { row = 0
-    -->         , column = Field "Nonexistent" Nothing
-    -->         , problems = [ FieldNotPresent "Nonexistent" ]
-    -->         }
+    -->     (DecodingErrors
+    -->         [ { row = 0
+    -->           , column = Field "Nonexistent" Nothing
+    -->           , problems = [ FieldNotPresent "Nonexistent" ]
+    -->           }
+    -->         ]
     -->     )
 
 -}
@@ -438,20 +445,30 @@ applyDecoder fieldNames (Decoder decode) allRows =
         (\( resolvedNames, firstRowNumber, rows ) ->
             rows
                 |> List.foldl
-                    (\row ->
-                        Result.andThen
-                            (\( soFar, rowNum ) ->
-                                case decode defaultLocation resolvedNames rowNum row of
-                                    Ok val ->
-                                        Ok ( val :: soFar, rowNum - 1 )
+                    (\row ( soFar, rowNum ) ->
+                        ( case decode defaultLocation resolvedNames rowNum row of
+                            Ok val ->
+                                case soFar of
+                                    Ok values ->
+                                        Ok (val :: values)
 
-                                    Err err ->
-                                        Err err
-                            )
+                                    Err errs ->
+                                        Err errs
+
+                            Err err ->
+                                case soFar of
+                                    Ok _ ->
+                                        Err [ err ]
+
+                                    Err errs ->
+                                        Err (err :: errs)
+                        , rowNum + 1
+                        )
                     )
-                    (Ok ( [], firstRowNumber ))
-                |> Result.map (Tuple.first >> List.reverse)
-                |> Result.mapError DecodingError
+                    ( Ok [], firstRowNumber )
+                |> Tuple.first
+                |> Result.map List.reverse
+                |> Result.mapError (DecodingErrors << List.reverse)
         )
         (getFieldNames fieldNames allRows)
 
@@ -466,18 +483,20 @@ Some more detail:
   - `ParsingError`: there was a problem parsing the data (the most common issue
     is problems with quoted fields. Check that any quoted fields are closed
     and that quotes are escaped by doubling.)
-  - `DecodingError`: we couldn't decode a value using the specified
+  - `DecodingErrors`: we couldn't decode a value using the specified
     decoder. See [`Problem`](#Problem) for more details.
 
 -}
 type Error
     = ParsingError Parser.Problem
     | NoFieldNamesOnFirstRow
-    | DecodingError
-        { row : Int
-        , column : Column
-        , problems : List Problem
-        }
+    | DecodingErrors
+        (List
+            { row : Int
+            , column : Column
+            , problems : List Problem
+            }
+        )
 
 
 {-| Where did the problem happen?
@@ -550,7 +569,7 @@ errorToString error =
         NoFieldNamesOnFirstRow ->
             "I expected to see field names on the first row, but there were none."
 
-        DecodingError err ->
+        DecodingErrors errs ->
             let
                 problemString : Problem -> String
                 problemString problem =
@@ -575,22 +594,39 @@ errorToString error =
 
                         Failure custom ->
                             custom
+
+                errString : { row : Int, column : Column, problems : List Problem } -> String
+                errString err =
+                    case List.map problemString err.problems of
+                        [] ->
+                            "There was an internal error while generating an error on row "
+                                ++ String.fromInt err.row
+                                ++ " and I don't have any info about what went wrong. Please open an issue!"
+
+                        [ only ] ->
+                            "There was a problem on row "
+                                ++ String.fromInt err.row
+                                ++ ": "
+                                ++ only
+
+                        many ->
+                            "There were some problems on row "
+                                ++ String.fromInt err.row
+                                ++ ":\n\n"
+                                ++ String.join "\n" (List.map (\problem -> " - " ++ problem) many)
             in
-            case List.map problemString err.problems of
+            case errs of
                 [] ->
-                    "There was an internal error and I don't have any info about what went wrong. Please open an issue!"
+                    "Something went wrong, but I got an blank error list so I don't know what it was. Please open an issue!"
 
                 [ only ] ->
-                    "There was a problem on row "
-                        ++ String.fromInt err.row
-                        ++ ": "
-                        ++ only
+                    errString only
 
-                multi ->
-                    "There were some problems on row "
-                        ++ String.fromInt err.row
-                        ++ ":\n\n"
-                        ++ String.join "\n" (List.map (\problem -> " - " ++ problem) multi)
+                many ->
+                    "I saw "
+                        ++ String.fromInt (List.length many)
+                        ++ " problems while decoding this CSV:\n\n"
+                        ++ String.join "\n\n" (List.map errString errs)
 
 
 
