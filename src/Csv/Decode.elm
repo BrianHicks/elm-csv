@@ -94,14 +94,14 @@ fromString convert =
                                 Err problem ->
                                     Err
                                         { row = rowNum
-                                        , column = columnFromLocation location
+                                        , column = locationToColumn fieldNames location
                                         , problems = [ problem ]
                                         }
 
                         Nothing ->
                             Err
                                 { row = rowNum
-                                , column = columnFromLocation location
+                                , column = locationToColumn fieldNames location
                                 , problems = [ ExpectedColumn colNum ]
                                 }
 
@@ -117,21 +117,21 @@ fromString convert =
                                         Err problem ->
                                             Err
                                                 { row = rowNum
-                                                , column = columnFromLocation location
+                                                , column = locationToColumn fieldNames location
                                                 , problems = [ problem ]
                                                 }
 
                                 Nothing ->
                                     Err
                                         { row = rowNum
-                                        , column = columnFromLocation location
+                                        , column = locationToColumn fieldNames location
                                         , problems = [ ExpectedField name ]
                                         }
 
                         Nothing ->
                             Err
                                 { row = rowNum
-                                , column = columnFromLocation location
+                                , column = locationToColumn fieldNames location
                                 , problems = [ FieldNotPresent name ]
                                 }
 
@@ -140,7 +140,7 @@ fromString convert =
                         [] ->
                             Err
                                 { row = rowNum
-                                , column = columnFromLocation location
+                                , column = locationToColumn fieldNames location
                                 , problems = [ ExpectedColumn 0 ]
                                 }
 
@@ -152,14 +152,14 @@ fromString convert =
                                 Err problem ->
                                     Err
                                         { row = rowNum
-                                        , column = columnFromLocation location
+                                        , column = locationToColumn fieldNames location
                                         , problems = [ problem ]
                                         }
 
                         _ ->
                             Err
                                 { row = rowNum
-                                , column = columnFromLocation location
+                                , column = locationToColumn fieldNames location
                                 , problems = [ AmbiguousColumn ]
                                 }
 
@@ -493,14 +493,14 @@ type Column
     | OnlyColumn
 
 
-columnFromLocation : Location -> Column
-columnFromLocation location =
+locationToColumn : Dict String Int -> Location -> Column
+locationToColumn fieldNames location =
     case location of
         Column_ i ->
             Column i
 
         Field_ name ->
-            Field name Nothing
+            Field name (Dict.get name fieldNames)
 
         OnlyColumn_ ->
             OnlyColumn
@@ -746,10 +746,10 @@ succeed value =
 fail : String -> Decoder a
 fail message =
     Decoder
-        (\location _ rowNum _ ->
+        (\location fieldNames rowNum _ ->
             Err
                 { row = rowNum
-                , column = columnFromLocation location
+                , column = locationToColumn fieldNames location
                 , problems = [ Failure message ]
                 }
         )

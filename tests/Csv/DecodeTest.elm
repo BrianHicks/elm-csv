@@ -234,7 +234,7 @@ fieldTest =
                         (Err
                             (DecodingError
                                 { row = 1
-                                , column = Field "Other" Nothing
+                                , column = Field "Other" (Just 1)
                                 , problems = [ Decode.ExpectedField "Other" ]
                                 }
                             )
@@ -272,7 +272,7 @@ fieldTest =
                         (Err
                             (DecodingError
                                 { row = 1
-                                , column = Field "Number" Nothing
+                                , column = Field "Number" (Just 0)
                                 , problems = [ Decode.ExpectedInt "not a number" ]
                                 }
                             )
