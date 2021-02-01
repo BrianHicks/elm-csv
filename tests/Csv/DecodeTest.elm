@@ -134,13 +134,13 @@ columnTest =
 fieldTest : Test
 fieldTest =
     describe "field"
-        [ test "does not work when no field names are provided or present" <|
+        [ test "fails when no field names are provided or present" <|
             \_ ->
                 "a"
                     |> Decode.decodeCsv NoFieldNames (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err (DecodingError { row = 0, problem = Decode.FieldNotPresent "Name" }))
-        , test "does not work when the provided headers don't contain the name" <|
+        , test "fails when the provided headers don't contain the name" <|
             \_ ->
                 "a"
                     |> Decode.decodeCsv
@@ -155,7 +155,7 @@ fieldTest =
                         (CustomFieldNames [ "Name" ])
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal (Ok [ "a" ])
-        , test "does not work when the first row doesn't contain the name" <|
+        , test "fails when the first row doesn't contain the name" <|
             \_ ->
                 "Blah\u{000D}\na"
                     |> Decode.decodeCsv
