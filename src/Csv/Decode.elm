@@ -502,7 +502,8 @@ type Error
 {-| Where did the problem happen?
 
   - `Column`: at this column number
-  - `Field`: at this named column (with optional column number)
+  - `Field`: at this named column (with optional column number if we were
+    able to look up what column we _should_ have found.)
   - `OnlyColumn`: at the only column in the row
 
 -}
