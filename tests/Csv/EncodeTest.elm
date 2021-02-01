@@ -1,7 +1,9 @@
 module Csv.EncodeTest exposing (..)
 
 import Csv.Encode as Encode
+import Csv.Parser as Parser
 import Expect
+import Fuzz exposing (Fuzzer)
 import Test exposing (..)
 
 
@@ -137,4 +139,57 @@ encodeTest =
                             }
                         |> Expect.equal "ID;Name;Species\u{000D}\n1;Atlas;cat\u{000D}\n2;Axel;puffin"
             ]
+        ]
+
+
+roundTripTest : Test
+roundTripTest =
+    fuzz2 weirdCsvFuzzer fieldSeparatorFuzzer "anything we encode, we can parse" <|
+        \weirdCsv fieldSeparator ->
+            weirdCsv
+                |> Encode.encode
+                    { encoder = Encode.withoutFieldNames identity
+                    , fieldSeparator = fieldSeparator
+                    }
+                |> Parser.parse { fieldSeparator = fieldSeparator }
+                |> Expect.equal (Ok weirdCsv)
+
+
+weirdCsvFuzzer : Fuzzer (List (List String))
+weirdCsvFuzzer =
+    Fuzz.oneOf
+        [ Fuzz.constant "a"
+        , Fuzz.constant "b "
+        , Fuzz.constant "\""
+        , Fuzz.constant ","
+        , Fuzz.constant ";"
+        , Fuzz.constant "\n"
+        , Fuzz.constant "\u{000D}"
+        ]
+        |> nonEmptyList
+        |> Fuzz.map String.concat
+        |> nonEmptyList
+        |> shortList
+
+
+fieldSeparatorFuzzer : Fuzzer Char
+fieldSeparatorFuzzer =
+    Fuzz.oneOf
+        [ Fuzz.constant ','
+        , Fuzz.constant ';'
+        , Fuzz.constant '\t'
+        ]
+
+
+nonEmptyList : Fuzzer a -> Fuzzer (List a)
+nonEmptyList fuzzer =
+    Fuzz.map2 (::) fuzzer (shortList fuzzer)
+
+
+shortList : Fuzzer a -> Fuzzer (List a)
+shortList fuzzer =
+    Fuzz.oneOf
+        [ Fuzz.constant []
+        , Fuzz.map List.singleton fuzzer
+        , Fuzz.map2 (\a b -> [ a, b ]) fuzzer fuzzer
         ]
