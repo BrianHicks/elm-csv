@@ -64,7 +64,7 @@ import Dict exposing (Dict)
 if you have a `Pet` data type, you'd want a `Decoder Pet`.
 -}
 type Decoder a
-    = Decoder (Location -> Dict String Int -> Int -> List String -> Result Problem a)
+    = Decoder (Location -> Dict String Int -> Int -> List String -> Result { row : Int, problems : List Problem } a)
 
 
 fromString : (String -> Result Problem a) -> Decoder a
@@ -75,34 +75,49 @@ fromString convert =
                 Column colNum ->
                     case row |> List.drop colNum |> List.head of
                         Just value ->
-                            convert value
+                            case convert value of
+                                Ok converted ->
+                                    Ok converted
+
+                                Err problem ->
+                                    Err { row = rowNum, problems = [ problem ] }
 
                         Nothing ->
-                            Err (ExpectedColumn colNum)
+                            Err { row = rowNum, problems = [ ExpectedColumn colNum ] }
 
                 Field name ->
                     case Dict.get name fieldNames of
                         Just colNum ->
                             case row |> List.drop colNum |> List.head of
                                 Just value ->
-                                    convert value
+                                    case convert value of
+                                        Ok converted ->
+                                            Ok converted
+
+                                        Err problem ->
+                                            Err { row = rowNum, problems = [ problem ] }
 
                                 Nothing ->
-                                    Err (ExpectedField name)
+                                    Err { row = rowNum, problems = [ ExpectedField name ] }
 
                         Nothing ->
-                            Err (FieldNotPresent name)
+                            Err { row = rowNum, problems = [ FieldNotPresent name ] }
 
                 Only ->
                     case row of
                         [] ->
-                            Err (ExpectedColumn 0)
+                            Err { row = rowNum, problems = [ ExpectedColumn 0 ] }
 
                         [ only ] ->
-                            convert only
+                            case convert only of
+                                Ok converted ->
+                                    Ok converted
+
+                                Err problem ->
+                                    Err { row = rowNum, problems = [ problem ] }
 
                         _ ->
-                            Err AmbiguousColumn
+                            Err { row = rowNum, problems = [ AmbiguousColumn ] }
 
 
 {-| Decode a string from a CSV.
@@ -113,7 +128,7 @@ Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames string "a,b"
-    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
+    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
 
 -}
 string : Decoder String
@@ -126,13 +141,13 @@ string =
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
     decodeCsv NoFieldNames int "volcano"
-    --> Err (DecodingError { row = 0, problem = ExpectedInt "volcano" })
+    --> Err (DecodingError { row = 0, problems = [ ExpectedInt "volcano" ] })
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames int "1,2"
-    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
+    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
 
 -}
 int : Decoder Int
@@ -152,13 +167,13 @@ int =
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
 
     decodeCsv NoFieldNames float "mimesis"
-    --> Err (DecodingError { row = 0, problem = ExpectedFloat "mimesis" })
+    --> Err (DecodingError { row = 0, problems = [ ExpectedFloat "mimesis" ] })
 
 Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames float "1.0,2.0"
-    --> Err (DecodingError { row = 0, problem = AmbiguousColumn })
+    --> Err (DecodingError { row = 0, problems = [ AmbiguousColumn ] })
 
 -}
 float : Decoder Float
@@ -177,9 +192,6 @@ float =
 
     decodeCsv NoFieldNames (blank int) "\r\n1"
     --> Ok [ Nothing, Just 1 ]
-
-    decodeCsv NoFieldNames (blank int) "not a number"
-    --> Err (DecodingError { row = 0, problem = ExpectedInt "not a number" })
 
 -}
 blank : Decoder a -> Decoder (Maybe a)
@@ -207,12 +219,10 @@ type Location
 
 {-| Parse a value at a numbered column in the CSV, starting from 0.
 
-    decodeCsv NoFieldNames (column 0 string) "Argentina" --> Ok [ "Argentina" ]
-
     decodeCsv NoFieldNames (column 1 int) "1,2,3" --> Ok [ 2 ]
 
     decodeCsv NoFieldNames (column 100 float) "3.14"
-    --> Err (DecodingError { row = 0, problem = ExpectedColumn 100 })
+    --> Err (DecodingError { row = 0, problems = [ ExpectedColumn 100 ] })
 
 -}
 column : Int -> Decoder a -> Decoder a
@@ -245,7 +255,7 @@ to provide these names, see [`FieldNames`](#FieldNames)
         (CustomFieldNames [ "Constant" ])
         (field "Nonexistent" float)
         "3.14"
-    --> Err (DecodingError { row = 0, problem = FieldNotPresent "Nonexistent" })
+    --> Err (DecodingError { row = 0, problems = [ FieldNotPresent "Nonexistent" ] })
 
 -}
 field : String -> Decoder a -> Decoder a
@@ -297,7 +307,7 @@ getFieldNames headers rows =
         FieldNamesFromFirstRow ->
             case rows of
                 [] ->
-                    Err (DecodingError { row = 0, problem = NoFieldNamesOnFirstRow })
+                    Err (DecodingError { row = 0, problems = [ NoFieldNamesOnFirstRow ] })
 
                 first :: rest ->
                     Ok ( fromList (List.map String.trim first), 1, rest )
@@ -349,8 +359,8 @@ applyDecoder fieldNames (Decoder decode) allRows =
                                     Ok val ->
                                         Ok ( val :: soFar, rowNum - 1 )
 
-                                    Err problem ->
-                                        Err { row = rowNum, problem = problem }
+                                    Err err ->
+                                        Err err
                             )
                     )
                     (Ok ( [], firstRowNumber ))
@@ -376,7 +386,7 @@ Some more detail:
 -}
 type Error
     = ParsingError Parser.Problem
-    | DecodingError { row : Int, problem : Problem }
+    | DecodingError { row : Int, problems : List Problem }
 
 
 {-| Things that went wrong specifically while decoding.
@@ -407,7 +417,6 @@ type Problem
     | ExpectedInt String
     | ExpectedFloat String
     | Failure String
-    | ManyProblems Problem Problem
 
 
 {-| Want an human-readable version of an [`Error`](#Error)? Here we are!
@@ -423,37 +432,34 @@ errorToString error =
 
         DecodingError err ->
             let
-                problems : Problem -> List String
-                problems problem =
+                problemString : Problem -> String
+                problemString problem =
                     case problem of
                         NoFieldNamesOnFirstRow ->
-                            [ "I expected to see field names on the first row, but there were none." ]
+                            "I expected to see field names on the first row, but there were none."
 
                         FieldNotPresent name ->
-                            [ "I looked for a column named `" ++ name ++ "`, but it was not provided in the field names." ]
+                            "I looked for a column named `" ++ name ++ "`, but it was not provided in the field names."
 
                         ExpectedColumn i ->
-                            [ "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist." ]
+                            "I looked for a value in column " ++ String.fromInt i ++ ", but that column doesn't exist."
 
                         ExpectedField name ->
-                            [ "I looked for a column named `" ++ name ++ "`, but couldn't find one." ]
+                            "I looked for a column named `" ++ name ++ "`, but couldn't find one."
 
                         AmbiguousColumn ->
-                            [ "I needed there to be exactly one column." ]
+                            "I needed there to be exactly one column."
 
                         ExpectedInt notInt ->
-                            [ "I expected to parse an int from `" ++ notInt ++ "`, but couldn't." ]
+                            "I expected to parse an int from `" ++ notInt ++ "`, but couldn't."
 
                         ExpectedFloat notFloat ->
-                            [ "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't." ]
+                            "I expected to parse an float from `" ++ notFloat ++ "`, but couldn't."
 
                         Failure custom ->
-                            [ custom ]
-
-                        ManyProblems first second ->
-                            problems first ++ problems second
+                            custom
             in
-            case problems err.problem of
+            case List.map problemString err.problems of
                 [] ->
                     "There was an internal error and I don't have any info about what went wrong. Please open an issue!"
 
@@ -600,13 +606,13 @@ recover (Decoder first) (Decoder second) =
                 Ok value ->
                     Ok value
 
-                Err problem ->
+                Err err ->
                     case second location fieldNames rowNum row of
                         Ok value ->
                             Ok value
 
-                        Err problem2 ->
-                            Err (ManyProblems problem problem2)
+                        Err { problems } ->
+                            Err { err | problems = err.problems ++ problems }
 
 
 {-| Always succeed, no matter what. Mostly useful with [`andThen`](#andThen).
@@ -621,7 +627,7 @@ succeed value =
 -}
 fail : String -> Decoder a
 fail message =
-    Decoder (\_ _ _ _ -> Err (Failure message))
+    Decoder (\_ _ rowNum _ -> Err { row = rowNum, problems = [ Failure message ] })
 
 
 {-| Decode some value _and then_ make a decoding decision based on the

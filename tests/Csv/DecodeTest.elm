@@ -48,7 +48,7 @@ intTest =
                         (Err
                             (DecodingError
                                 { row = 0
-                                , problem = Decode.ExpectedInt "a"
+                                , problems = [ Decode.ExpectedInt "a" ]
                                 }
                             )
                         )
@@ -81,7 +81,7 @@ floatTest =
                         (Err
                             (DecodingError
                                 { row = 0
-                                , problem = Decode.ExpectedFloat "a"
+                                , problems = [ Decode.ExpectedFloat "a" ]
                                 }
                             )
                         )
@@ -100,7 +100,7 @@ blankTest =
             \_ ->
                 "banana"
                     |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
-                    |> Expect.equal (Err (DecodingError { row = 0, problem = Decode.ExpectedInt "banana" }))
+                    |> Expect.equal (Err (DecodingError { row = 0, problems = [ Decode.ExpectedInt "banana" ] }))
         , test "when the field is non-blank and valid for the decoder" <|
             \_ ->
                 "1"
@@ -127,7 +127,7 @@ columnTest =
                 "a"
                     |> Decode.decodeCsv NoFieldNames (Decode.column 1 Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.ExpectedColumn 1 }))
+                        (Err (DecodingError { row = 0, problems = [ Decode.ExpectedColumn 1 ] }))
         ]
 
 
@@ -139,7 +139,7 @@ fieldTest =
                 "a"
                     |> Decode.decodeCsv NoFieldNames (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.FieldNotPresent "Name" }))
+                        (Err (DecodingError { row = 0, problems = [ Decode.FieldNotPresent "Name" ] }))
         , test "fails when the provided headers don't contain the name" <|
             \_ ->
                 "a"
@@ -147,7 +147,7 @@ fieldTest =
                         (CustomFieldNames [])
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.FieldNotPresent "Name" }))
+                        (Err (DecodingError { row = 0, problems = [ Decode.FieldNotPresent "Name" ] }))
         , test "retrieves the field from custom-provided fields" <|
             \_ ->
                 "a"
@@ -162,7 +162,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.FieldNotPresent "Name" }))
+                        (Err (DecodingError { row = 1, problems = [ Decode.FieldNotPresent "Name" ] }))
         , test "fails when there is no first row" <|
             \_ ->
                 ""
@@ -170,7 +170,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 0, problem = Decode.NoFieldNamesOnFirstRow }))
+                        (Err (DecodingError { row = 0, problems = [ Decode.NoFieldNamesOnFirstRow ] }))
         , test "fails when name is not present in the first row" <|
             \_ ->
                 "Bad\u{000D}\nAtlas"
@@ -178,7 +178,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Name" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.FieldNotPresent "Name" }))
+                        (Err (DecodingError { row = 1, problems = [ Decode.FieldNotPresent "Name" ] }))
         , test "fails when the associated column is not present in the row" <|
             \_ ->
                 "Name,Other\u{000D}\nAtlas"
@@ -186,7 +186,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Other" Decode.string)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.ExpectedField "Other" }))
+                        (Err (DecodingError { row = 1, problems = [ Decode.ExpectedField "Other" ] }))
         , test "uses the headers on the first row, if present" <|
             \_ ->
                 "Name\u{000D}\nAtlas"
@@ -210,7 +210,7 @@ fieldTest =
                         FieldNamesFromFirstRow
                         (Decode.field "Number" Decode.int)
                     |> Expect.equal
-                        (Err (DecodingError { row = 1, problem = Decode.ExpectedInt "not a number" }))
+                        (Err (DecodingError { row = 1, problems = [ Decode.ExpectedInt "not a number" ] }))
         ]
 
 
@@ -277,13 +277,11 @@ oneOfTest =
                         (Err
                             (DecodingError
                                 { row = 0
-                                , problem =
-                                    Decode.ManyProblems
-                                        (Decode.Failure "ONE")
-                                        (Decode.ManyProblems
-                                            (Decode.Failure "TWO")
-                                            (Decode.Failure "THREE")
-                                        )
+                                , problems =
+                                    [ Decode.Failure "ONE"
+                                    , Decode.Failure "TWO"
+                                    , Decode.Failure "THREE"
+                                    ]
                                 }
                             )
                         )
@@ -316,8 +314,8 @@ failTest =
                     |> Expect.equal
                         (Err
                             (DecodingError
-                                { problem = Decode.Failure "a nice description"
-                                , row = 0
+                                { row = 0
+                                , problems = [ Decode.Failure "a nice description" ]
                                 }
                             )
                         )
@@ -328,8 +326,8 @@ failTest =
                     |> Expect.equal
                         (Err
                             (DecodingError
-                                { problem = Decode.Failure "a nice description"
-                                , row = 0
+                                { row = 0
+                                , problems = [ Decode.Failure "a nice description" ]
                                 }
                             )
                         )
@@ -365,8 +363,8 @@ andThenTest =
                         |> Expect.equal
                             (Err
                                 (DecodingError
-                                    { problem = Decode.Failure "Only positive integers are allowed!"
-                                    , row = 0
+                                    { row = 0
+                                    , problems = [ Decode.Failure "Only positive integers are allowed!" ]
                                     }
                                 )
                             )
@@ -395,8 +393,8 @@ andThenTest =
                         |> Expect.equal
                             (Err
                                 (DecodingError
-                                    { problem = Decode.ExpectedColumn 3
-                                    , row = 0
+                                    { row = 0
+                                    , problems = [ Decode.ExpectedColumn 3 ]
                                     }
                                 )
                             )
@@ -426,7 +424,7 @@ fromResultTest =
                         (Err
                             (DecodingError
                                 { row = 0
-                                , problem = Decode.Failure "\"banana\" is not a valid hexadecimal string because n is not a valid hexadecimal character."
+                                , problems = [ Decode.Failure "\"banana\" is not a valid hexadecimal string because n is not a valid hexadecimal character." ]
                                 }
                             )
                         )
@@ -455,7 +453,7 @@ fromMaybeTest =
                         (Err
                             (DecodingError
                                 { row = 0
-                                , problem = Decode.Failure "Expected an int"
+                                , problems = [ Decode.Failure "Expected an int" ]
                                 }
                             )
                         )
