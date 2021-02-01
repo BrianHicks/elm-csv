@@ -160,7 +160,7 @@ fromString convert =
                             Err
                                 { row = rowNum
                                 , column = locationToColumn fieldNames location
-                                , problems = [ AmbiguousColumn ]
+                                , problems = [ AmbiguousColumn (List.length row) ]
                                 }
 
 
@@ -176,7 +176,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingError
     -->         { row = 0
     -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn ]
+    -->         , problems = [ AmbiguousColumn 2 ]
     -->         }
     -->     )
 
@@ -207,7 +207,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingError
     -->         { row = 0
     -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn ]
+    -->         , problems = [ AmbiguousColumn 2 ]
     -->         }
     -->     )
 
@@ -245,7 +245,7 @@ there is only one column in the CSV and try to decode that.
     -->     (DecodingError
     -->         { row = 0
     -->         , column = OnlyColumn
-    -->         , problems = [ AmbiguousColumn ]
+    -->         , problems = [ AmbiguousColumn 2 ]
     -->         }
     -->     )
 
@@ -514,9 +514,10 @@ locationToColumn fieldNames location =
   - `ExpectedColumn Int` and `ExpectedField String`: we looked for a value
     at a specific column, but couldn't find it. The argument specifies where
     we tried to look.
-  - `AmbiguousColumn`: basic decoders expect to find a single value. If there
-    are multiple fields in a row, and you don't specify which one to use with
-    [`column`](#column) or [`field`](#field), you'll get this error.
+  - `AmbiguousColumn Int`: basic decoders expect to find a single value. If
+    there are multiple fields in a row, and you don't specify which one
+    to use with [`column`](#column) or [`field`](#field), you'll get this
+    error. The argument says how many columns we found.
   - `ExpectedInt String` and `ExpectedFloat String`: we tried to parse a
     string into a number, but couldn't. The arguments specify the strings
     we got.
@@ -529,8 +530,7 @@ type Problem
     = FieldNotPresent String
     | ExpectedColumn Int
     | ExpectedField String
-      -- TODO: take an integer with how many fields we got
-    | AmbiguousColumn
+    | AmbiguousColumn Int
     | ExpectedInt String
     | ExpectedFloat String
     | Failure String
@@ -564,8 +564,8 @@ errorToString error =
                         ExpectedField name ->
                             "I looked for a column named `" ++ name ++ "`, but couldn't find one."
 
-                        AmbiguousColumn ->
-                            "I needed there to be exactly one column."
+                        AmbiguousColumn howMany ->
+                            "I needed there to be exactly one column, but there were " ++ String.fromInt howMany ++ "."
 
                         ExpectedInt notInt ->
                             "I expected to parse an int from `" ++ notInt ++ "`, but couldn't."
