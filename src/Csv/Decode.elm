@@ -480,6 +480,13 @@ type Error
         }
 
 
+{-| Where did the problem happen?
+
+  - `Column`: at this column number
+  - `Field`: at this named column (with optional column number)
+  - `OnlyColumn`: at the only column in the row
+
+-}
 type Column
     = Column Int
     | Field String (Maybe Int)
