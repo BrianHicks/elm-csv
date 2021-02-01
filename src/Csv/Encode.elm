@@ -1,6 +1,13 @@
-module Csv.Encode exposing (..)
+module Csv.Encode exposing (encode, Encoder, withFieldNames, withoutFieldNames)
 
-import Dict
+{-| Turn a list of values into a CSV-formatted string, escaping characters
+as necessary.
+
+@docs encode, Encoder, withFieldNames, withoutFieldNames
+
+-}
+
+import Dict exposing (Dict)
 
 
 type Encoder a
@@ -25,10 +32,15 @@ encode :
     -> List a
     -> String
 encode { encoder, fieldSeparator } items =
+    let
+        fieldSeparatorString : String
+        fieldSeparatorString =
+            String.fromChar fieldSeparator
+    in
     items
         |> encodeItems encoder
         |> addFieldNames encoder
-        |> List.map (String.join (String.fromChar fieldSeparator))
+        |> List.map (String.join fieldSeparatorString << List.map (quoteIfNecessary fieldSeparatorString))
         |> String.join "\u{000D}\n"
 
 
@@ -39,6 +51,7 @@ encodeItems encoder rows =
             List.map
                 (\row ->
                     let
+                        named : Dict String String
                         named =
                             Dict.fromList (convert row)
                     in
@@ -60,3 +73,17 @@ addFieldNames encoder rows =
 
         WithoutFieldNames _ ->
             rows
+
+
+quoteIfNecessary : String -> String -> String
+quoteIfNecessary fieldSeparator value =
+    if
+        String.contains "\"" value
+            || String.contains fieldSeparator value
+            || String.contains "\u{000D}\n" value
+            || String.contains "\n" value
+    then
+        "\"" ++ String.replace "\"" "\"\"" value ++ "\""
+
+    else
+        value

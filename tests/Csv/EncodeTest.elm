@@ -8,13 +8,71 @@ import Test exposing (..)
 encodeTest : Test
 encodeTest =
     let
+        pets : List { id : Int, name : String, species : String }
         pets =
             [ { id = 1, name = "Atlas", species = "cat" }
             , { id = 2, name = "Axel", species = "puffin" }
             ]
     in
     describe "encode"
-        [ describe "with field names"
+        [ describe "without field names" <|
+            [ test "encodes without field names" <|
+                \_ ->
+                    pets
+                        |> Encode.encode
+                            { encoder =
+                                Encode.withoutFieldNames
+                                    (\{ id, name, species } ->
+                                        [ String.fromInt id
+                                        , name
+                                        , species
+                                        ]
+                                    )
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "1,Atlas,cat\u{000D}\n2,Axel,puffin"
+            , test "escapes quotes" <|
+                \_ ->
+                    [ "\"" ]
+                        |> Encode.encode
+                            { encoder = Encode.withoutFieldNames List.singleton
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "\"\"\"\""
+            , test "escapes field separators (comma)" <|
+                \_ ->
+                    [ "," ]
+                        |> Encode.encode
+                            { encoder = Encode.withoutFieldNames List.singleton
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "\",\""
+            , test "escapes field separators (semicolon)" <|
+                \_ ->
+                    [ ";" ]
+                        |> Encode.encode
+                            { encoder = Encode.withoutFieldNames List.singleton
+                            , fieldSeparator = ';'
+                            }
+                        |> Expect.equal "\";\""
+            , test "escapes newlines" <|
+                \_ ->
+                    [ "\n" ]
+                        |> Encode.encode
+                            { encoder = Encode.withoutFieldNames List.singleton
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "\"\n\""
+            , test "escapes row separators" <|
+                \_ ->
+                    [ "\u{000D}\n" ]
+                        |> Encode.encode
+                            { encoder = Encode.withoutFieldNames List.singleton
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "\"\u{000D}\n\""
+            ]
+        , describe "with field names"
             [ test "encodes with field names" <|
                 \_ ->
                     pets
