@@ -34,8 +34,16 @@ type Encoder a
             }
         --> "red,green,blue\r\nFF,FF,FF\r\n80,80,80\r\n00,00,00"
 
-If you provide a field name which isn't in the list for a row, it will be
-replaced with a blank field to avoid generating a misaligned CSV.
+The ordering of columns is determined by the order of values returned from
+the function you provide.
+
+  - If the function you provide returns fields in different orders,
+    [`encode`](#encode) will determine a final ordering based on the average
+    position of each column.
+
+  - If the function sometimes leaves a `(field, value)` pair out of the list,
+    [`encode`](#encode) will use a blank string for the value on that row
+    to avoid generating a misaligned CSV.
 
 -}
 withFieldNames : (a -> List ( String, String )) -> Encoder a
