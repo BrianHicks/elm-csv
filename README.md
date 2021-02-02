@@ -1,7 +1,6 @@
 # elm-csv
 
 Decode CSV in the most boring way possible.
-
 Other CSV libraries have exciting, innovative APIs... not this one!
 Pretend you're writing a [JSON decoder](https://package.elm-lang.org/packages/elm/json/latest/), gimme your data, get on with your life.
 
@@ -29,7 +28,7 @@ Decode.decodeCsv Decode.NoFieldNames decoder csv
 -->     ]
 ```
 
-However, in an effort to avoid a common problem with `elm/json` ("how do I decode records with more than 8 fields?") this library also exposes a [pipeline-style decoder](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/) for records:
+However, in an effort to avoid a common problem with `elm/json` ("How do I decode a record with more than 8 fields?") this library also exposes a pipeline-style decoder ([inspired by `NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/)) for records:
 
 ```elm
 import Csv.Decode as Decode exposing (Decoder)
@@ -66,27 +65,27 @@ Decode.decodeCsv Decode.FieldNamesFromFirstRow decoder csv
 
 ## FAQ
 
-### Can this do TSVs too?
+### Can this do TSVs too? What about European-style CSVs that use semicolon instead of comma?
 
-Yep!
+Yes to both!
 Use `decodeCustom`.
 It takes a field and row separator string, which can be whatever you need.
 
 ### Aren't there like (*checks*) 8 other CSV libraries already?
 
 Yes, there are!
-And while I appreciate the hard work that other people have put into those, there are a couple problems:
+While I appreciate the hard work that other people have put into those, there are a couple problems:
 
 First, you need to put together multiple libraries to successfully parse CSV.
-Usually you'll use something like [`lovasoa/elm-csv`](https://package.elm-lang.org/packages/lovasoa/elm-csv/latest/) to parse into a `List (List String)`, and then something like [`ericgj/elm-csv-decode`](https://package.elm-lang.org/packages/ericgj/elm-csv-decode/latest/) to convert from a grid of strings into the values you care about.
-
+Before this package was published, you had to pick one package for parsing to `List (List String)` and another to decode from that into something you actually cared about.
 Props to those authors for making their hard work available, of course, but this situation bugs me!
+
 I don't want to have to pick different libraries for parsing and converting.
 I just want it to work like `elm/json` where I write a decoder, give the package a string, and handle a `Result`.
 This should not require so much thought!
 
-The second thing, and the one that prompted me to finally do something about this, is that none of the libraries available implement `andThen`.
-Sure, you can use a `Result` to do whatever you like, but there's not a good way to combine make decoding decisions dependent on the fields you see.
+The second thing, and the one that prompted me to publish this package, is that none of the libraries available at the time implemented `andThen`.
+Sure, you can use a `Result` to do whatever you like, but there's not a good way to make a decoding decision for one field dependent on another.
 
 ## Contributing
 
@@ -95,32 +94,24 @@ Install that, then run `nix-shell` to get into a development environment.
 
 Things I'd appreciate help with:
 
-- Testing the parser on many kinds of CSV and TSV data.
+- **Testing the parser on many kinds of CSV and TSV data.**
   If you find that some software produces something that this library can't handle, please open an issue with a sample!
 
-- Feedback on speed.
-  For the data sizes I'm working with in my use of this library, speed is unlikely to be an issue.
-  If you're parsing a *lot* of data, though, it may be for you.
+- **Feedback on speed.**
   If you find that this library has become a bottleneck in your application, please open an issue.
 
-- Feedback on decoders for things you find necessary (but please open an issue and talk through it instead of jumping straight to a PR!)
+- **Feedback on decoders for things you find necessary** (but please open an issue and talk through it instead of jumping straight to a PR!)
   Some things I've thought of: `parse : Parser.Parser a -> Decoder a` and `json : Json.Decode.Decoder a -> Decoder a`.
-  The reason they're not in the library now is because a) `fromResult` exists to make those easier and b) I don't want to add new dependencies without good reason.
+  The reason they're not in the library now is because a) `fromResult` exists to make those easier and b) I don't want to add new package-level dependencies without a good reason.
   If you find yourself writing things like this constantly, though, let's talk about them!
 
-Things I'd appreciate seeing PRs for, which we probably don't need to coordinate much on other than a heads-up that you're doing the work:
-
-- Benchmarking and performance improvements.
-  Internally, we just use `List` for everything.
-  Some smart application of `Array` could potentially perform a lot better, but I have held off optimizing since I haven't measured!
-
-- Docs.
+- **Docs.**
   Always docs.
   Forever docs.
 
 ## Climate Action
 
-I want my open-source activities to support projects addressing the climate crisis (for example, projects in clean energy, public transit, reforestation, or sustainable agriculture.)
+I want my open-source work to support projects addressing the climate crisis (for example, projects in clean energy, public transit, reforestation, or sustainable agriculture.)
 If you are working on such a project, and find a bug or missing feature in any of my libraries, **please let me know and I will treat your issue as high priority.**
 I'd also be happy to support such projects in other ways.
 In particular, I've worked with Elm for a long time and would be happy to advise on your implementation.
