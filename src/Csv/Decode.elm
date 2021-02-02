@@ -6,16 +6,29 @@ module Csv.Decode exposing
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe
     )
 
-{-| Decode values from CSV. A crash course on constructing decoders:
+{-| Decode values from CSV. This package tries to be as
+unsurprising as possible, imitating [`elm/json`][elm-json] and
+[`NoRedInk/elm-json-decode-pipeline`][json-decode-pipeline] so that you can
+apply whatever you already know about JSON decoders to a different data format.
 
-Say you have this data:
+[elm-json]: https://package.elm-lang.org/packages/elm/json/latest/
+[json-decode-pipline]: https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/
+
+
+## A Crash Course on Constructing Decoders
+
+Say you have a CSV like this:
 
     ID,Name,Species
     1,Atlas,cat
     2,Axel,puffin
 
-Let's get just the IDs first. They're in the first column ("ID"), so we'll
-use this package to ask for an [`int`](#int) at the ID [`field`](#field):
+You want to get some data out of it, so you're looking through these docs.
+Where do you begin?
+
+The first thing you need to know is that decoders are designed to fit together
+to match whatever data shapes are in your CSV. So to decode the ID (an `Int` in
+the "ID" field), you'd combine [`int`](#int) and [`field`](#field) like this:
 
     data : String
     data =
@@ -25,28 +38,17 @@ use this package to ask for an [`int`](#int) at the ID [`field`](#field):
     decodeCsv FieldNamesFromFirstRow (field "ID" int) data
     --> Ok [ 1, 2 ]
 
-All well and good, but what if we need more than one field? Let's try and
-get a tuple with [`map2`](#map2):
+But this is probably not enough, so we'll need to combine a bunch of decoders
+together using [`into`](#into):
 
     decodeCsv FieldNamesFromFirstRow
-        (map2 Tuple.pair
-            (field "ID" int)
-            (field "Name" string)
-        )
-        data
-    --> Ok [ (1, "Atlas"), (2, "Axel") ]
-
-Finally, let's expand to decoding entire rows using [`into`](#into) and
-[`pipeline`](#pipeline):
-
-    type alias Pet =
-        { id : Int
-        , name : String
-        , species : String
-        }
-
-    decodeCsv FieldNamesFromFirstRow
-        (into Pet
+        (into
+            (\id name species ->
+                { id = id
+                , name = name
+                , species = species
+                }
+            )
             |> pipeline (field "ID" int)
             |> pipeline (field "Name" string)
             |> pipeline (field "Species" string)
@@ -57,12 +59,8 @@ Finally, let's expand to decoding entire rows using [`into`](#into) and
     -->     , { id = 2, name = "Axel", species = "puffin" }
     -->     ]
 
-If you run into trouble, this library intentionally sticks as close
-to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and
-[`NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/)
-semantics as possible. Figuring out how you'd write an equivalent JSON
-decoder may help! (But if you run into something you truly can't do, please
-[open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
+You can decode as many things as you want by giving [`into`](#into) a function
+that takes more arguments.
 
 
 ## Basic Decoders
