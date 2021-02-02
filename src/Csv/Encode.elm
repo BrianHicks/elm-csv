@@ -6,7 +6,7 @@ module Csv.Encode exposing (encode, Encoder, withFieldNames, withoutFieldNames)
 
 -}
 
-import Dict exposing (Dict)
+import Dict
 
 
 {-| -}
@@ -95,6 +95,7 @@ encodeItems encoder rows =
                     List.foldr
                         (\row ( converted_, names ) ->
                             let
+                                convertedRow : List ( String, String )
                                 convertedRow =
                                     convert row
                             in
