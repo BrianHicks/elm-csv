@@ -3,7 +3,7 @@
     "name": "BrianHicks/elm-csv",
     "summary": "Decode CSV in the most boring way possible.",
     "license": "BSD-3-Clause",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "exposed-modules": [
         "Csv.Decode",
         "Csv.Encode",
