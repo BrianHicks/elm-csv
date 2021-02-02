@@ -9,13 +9,17 @@ module Csv.Encode exposing (encode, Encoder, withFieldNames, withoutFieldNames)
 import Dict
 
 
-{-| -}
+{-| Describe how you want the output CSV to be shaped. Constructe
+encoders with [`withFieldNames`](#withFieldNames) and
+[`withoutFieldNames`](#withoutFieldNames).
+-}
 type Encoder a
     = WithFieldNames (a -> List ( String, String ))
     | WithoutFieldNames (a -> List String)
 
 
-{-| Encode your data with a header full of field names at the top.
+{-| When provided a function that maps field names to values, this function
+uses it to produce a perfectly rectangular CSV.
 
     [ ( "FF", "FF", "FF" )
     , ( "80", "80", "80" )
@@ -35,15 +39,13 @@ type Encoder a
         --> "red,green,blue\r\nFF,FF,FF\r\n80,80,80\r\n00,00,00"
 
 The ordering of columns is determined by the order of values returned from
-the function you provide.
+the function.
 
-  - If the function you provide returns fields in different orders,
-    [`encode`](#encode) will determine a final ordering based on the average
-    position of each column.
+  - If the function returns fields in an inconsistent order, we will determine
+    a final ordering based on the average position of each column.
 
-  - If the function sometimes leaves a `(field, value)` pair out of the list,
-    [`encode`](#encode) will use a blank string for the value on that row
-    to avoid generating a misaligned CSV.
+  - If the function sometimes omits `(field, value)` pairs, we will leave
+    fields blank to avoid generating a misaligned CSV.
 
 -}
 withFieldNames : (a -> List ( String, String )) -> Encoder a
@@ -51,9 +53,8 @@ withFieldNames =
     WithFieldNames
 
 
-{-| Encode your data whatver way you like. This is the "live an exciting
-adventure" encoder: it will let you output rows with uneven lengths. It will
-still escape quotes properly, however!
+{-| Encode your data however you like. This is the "live an exciting adventure"
+encoder in that it will let you output rows with uneven lengths.
 
     [ ( "FF", "FF", "FF" )
     , ( "80", "80", "80" )
@@ -71,10 +72,8 @@ withoutFieldNames =
     WithoutFieldNames
 
 
-{-| Encode some data to a CSV string, quoting and escaping
-characters as necessary. See [`withFieldNames`](#withFieldNames) and
-[`withoutFieldNames`](#withoutFieldNames) for more on how to encode different
-kinds of data.
+{-| Encode some data to a CSV string, quoting and escaping characters as
+necessary.
 -}
 encode :
     { encoder : Encoder a

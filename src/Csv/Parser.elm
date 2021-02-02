@@ -2,9 +2,6 @@ module Csv.Parser exposing (parse, Problem(..))
 
 {-| CSV (and TSV) parsing.
 
-
-## Parsing
-
 @docs parse, Problem
 
 -}
@@ -16,10 +13,10 @@ module Csv.Parser exposing (parse, Problem(..))
     but the file ended before we saw a closing quote. If you meant to have
     a literal quote in your data, quote the whole field and then escape the
     literal quote by replacing it with `""`. For example, `": double prime`
-    would be escaped as `"": double prime`
+    would be encoded as `""": double prime"`.
   - `AdditionalCharactersAfterClosingQuote`: we found the closing pair of a
-    quoted field, but there was data after it instead of the end of the file
-    or a separator. Follow the quote-escaping advice above to get around this.
+    quoted field, but there was data after it but before a separator or the
+    end of the file. Follow the quote-escaping advice above to get around this.
 
 -}
 type Problem
@@ -27,10 +24,10 @@ type Problem
     | AdditionalCharactersAfterClosingQuote Int
 
 
-{-| Parse some data into a string-only list of lists. Prefer
-using `Csv.Decode.decodeCsv` or `Csv.Decode.decodeCustom`
-unless you need something unusally custom (and please [open an
-issue](https://github.com/BrianHicks/elm-csv/issues/new) if you do!)
+{-| Turn a CSV string into a list of rows. Prefer using `Csv.Decode.decodeCsv`
+or `Csv.Decode.decodeCustom` unless you need something unusally custom (and
+please [open an issue](https://github.com/BrianHicks/elm-csv/issues/new)
+if so!)
 -}
 parse : { fieldSeparator : Char } -> String -> Result Problem (List (List String))
 parse config source =

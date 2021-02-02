@@ -3,27 +3,66 @@ module Csv.Decode exposing
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
-    , oneOf, succeed, fail, andThen, fromResult, fromMaybe
+    , oneOf, andThen, succeed, fail, fromResult, fromMaybe
     )
 
 {-| Decode values from CSV. A crash course on constructing decoders:
 
-  - To decode basic values in different columns, use [`field`](#field) or
-    [`column`](#column) along with [`int`](#int), [`string`](#string), or
-    [`float`](#float).
-  - To transform values in ways that can't fail, pass them to [`map`](#map). To
-    transform them in ways that _can_ fail, pass decoders to
-    [`andThen`](#andThen) and call [`succeed`](#succeed) or [`fail`](#fail)
-    to handle the failure gracefully. If you just need to lift a
-    `Result String a` into a decoder, use [`fromResult`](#fromResult)
-  - To decode tuples, pass a constructor to [`map2`](#map2) or [`map3`](#map3).
-  - To decode records, use [`into`](#into) and [`pipeline`](#pipeline).
+Say you have this data:
 
-All of those functions have examples in their documentation. Check 'em out!
+    ID,Name,Species
+    1,Atlas,cat
+    2,Axel,puffin
 
-If you run into trouble, this library intentionally sticks as close to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and [`NoRedInk/elm-json-decode-into`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-into/latest/) semantics as possible.
-Figuring out how you'd write an equivalent JSON decoder may help!
-(But if you run into something you truly can't do, please [open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
+Let's get just the IDs first. They're in the first column ("ID"), so we'll
+use this package to ask for an [`int`](#int) at the ID [`field`](#field):
+
+    data : String
+    data =
+        -- \u{000D} is the carriage return
+        "ID,Name,Species\u{000D}\n1,Atlas,cat\u{000D}\n2,Axel,puffin"
+
+    decodeCsv FieldNamesFromFirstRow (field "ID" int) data
+    --> Ok [ 1, 2 ]
+
+All well and good, but what if we need more than one field? Let's try and
+get a tuple with [`map2`](#map2):
+
+    decodeCsv FieldNamesFromFirstRow
+        (map2 Tuple.pair
+            (field "ID" int)
+            (field "Name" string)
+        )
+        data
+    --> Ok [ (1, "Atlas"), (2, "Axel") ]
+
+Finally, let's expand to decoding entire rows using [`into`](#into) and
+[`pipeline`](#pipeline):
+
+    type alias Pet =
+        { id : Int
+        , name : String
+        , species : String
+        }
+
+    decodeCsv FieldNamesFromFirstRow
+        (into Pet
+            |> pipeline (field "ID" int)
+            |> pipeline (field "Name" string)
+            |> pipeline (field "Species" string)
+        )
+        data
+    --> Ok
+    -->     [ { id = 1, name = "Atlas", species = "cat" }
+    -->     , { id = 2, name = "Axel", species = "puffin" }
+    -->     ]
+
+If you run into trouble, this library intentionally sticks as close
+to [`elm/json`](https://package.elm-lang.org/packages/elm/json/latest/) and
+[`NoRedInk/elm-json-decode-pipeline`](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/)
+semantics as possible. Figuring out how you'd write an equivalent JSON
+decoder may help! (But if you run into something you truly can't do, please
+[open an issue](https://github.com/BrianHicks/elm-csv/issues/new).)
 
 
 ## Basic Decoders
@@ -48,7 +87,7 @@ Figuring out how you'd write an equivalent JSON decoder may help!
 
 ## Fancy Decoding
 
-@docs oneOf, succeed, fail, andThen, fromResult, fromMaybe
+@docs oneOf, andThen, succeed, fail, fromResult, fromMaybe
 
 -}
 
@@ -57,7 +96,7 @@ import Dict exposing (Dict)
 
 
 
--- PRIMITIVES
+-- BASIC DECODERS
 
 
 {-| A way to specify what kind of thing you want to decode into. For example,
@@ -164,11 +203,11 @@ fromString convert =
                                 }
 
 
-{-| Decode a string from a CSV.
+{-| Decode a string.
 
     decodeCsv NoFieldNames string "a" --> Ok [ "a" ]
 
-Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+Unless you specify otherwise (e.g. with [`field`](#field)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames string "a,b"
@@ -187,7 +226,7 @@ string =
     fromString Ok
 
 
-{-| Decode an integer from a CSV.
+{-| Decode an integer.
 
     decodeCsv NoFieldNames int "1" --> Ok [ 1 ]
 
@@ -201,7 +240,7 @@ string =
     -->         ]
     -->     )
 
-Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+Unless you specify otherwise (e.g. with [`field`](#field)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames int "1,2"
@@ -227,7 +266,7 @@ int =
                     Err (ExpectedInt value)
 
 
-{-| Decode a float from a CSV.
+{-| Decode a floating-point number.
 
     decodeCsv NoFieldNames float "3.14" --> Ok [ 3.14 ]
 
@@ -241,7 +280,7 @@ int =
     -->         ]
     -->     )
 
-Unless you specify otherwise (e.g. with [`column`](#column)) this will assume
+Unless you specify otherwise (e.g. with [`field`](#field)) this will assume
 there is only one column in the CSV and try to decode that.
 
     decodeCsv NoFieldNames float "1.0,2.0"
@@ -296,9 +335,9 @@ type Location
     | OnlyColumn_
 
 
-{-| Parse a value at a numbered column in the CSV, starting from 0.
+{-| Parse a value at a numbered column, starting from 0.
 
-    decodeCsv NoFieldNames (column 1 int) "1,2,3" --> Ok [ 2 ]
+    decodeCsv NoFieldNames (column 1 string) "a,b,c" --> Ok [ "b" ]
 
     decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err
@@ -316,39 +355,14 @@ column col (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Column_ col) fieldNames row)
 
 
-{-| Parse a value at a named column in the CSV. There are a number of ways
-to provide these names, see [`FieldNames`](#FieldNames)
+{-| Parse a value at a named column. There are a number of ways to provide
+these names, see [`FieldNames`](#FieldNames)
 
     decodeCsv
         FieldNamesFromFirstRow
         (field "Country" string)
         "Country\r\nArgentina"
     --> Ok [ "Argentina" ]
-
-    decodeCsv
-        FieldNamesFromFirstRow
-        (field "Country" string)
-        " Country \r\nArgentina"
-    --> Ok [ "Argentina" ]
-
-    decodeCsv
-        (CustomFieldNames [ "a", "b", "c" ])
-        (field "b" int)
-        "1,2,3"
-    --> Ok [ 2 ]
-
-    decodeCsv
-        (CustomFieldNames [ "Constant" ])
-        (field "Nonexistent" float)
-        "3.14"
-    --> Err
-    -->     (DecodingErrors
-    -->         [ { row = 0
-    -->           , column = Field "Nonexistent" Nothing
-    -->           , problems = [ FieldNotProvided "Nonexistent" ]
-    -->           }
-    -->         ]
-    -->     )
 
 -}
 field : String -> Decoder a -> Decoder a
@@ -362,11 +376,12 @@ field name (Decoder decoder) =
 
 {-| Where do we get names for use with [`field`](#field)?
 
-  - `NoFieldNames`: don't get field names at all. [`field`](#field) will always fail.
+  - `NoFieldNames`: don't get field names at all. [`field`](#field) will
+    always fail.
   - `CustomFieldNames`: use the provided field names in order (so `["Id", "Name"]`
     will mean that "Id" is in column 0 and "Name" is in column 1.)
   - `FieldNamesFromFirstRow`: use the first row of the CSV as the source of
-    field names. The columns of the first row are trimmed.
+    field names.
 
 -}
 type FieldNames
@@ -415,7 +430,7 @@ decodeCsv =
 
 
 {-| Convert something shaped roughly like a CSV. For example, to decode
-tab-separated values where the row separator is a single newline character:
+a TSV (_tab_-separated values) string:
 
     decodeCustom {  fieldSeparator = '\t' }
         NoFieldNames
@@ -473,15 +488,15 @@ applyDecoder fieldNames (Decoder decode) allRows =
         (getFieldNames fieldNames allRows)
 
 
-{-| Sometimes things go wrong. This is how we tell you what happened. If you
-need to present this to someone, you can get a human-readable version with
-[`errorToString`](#errorToString)
+{-| Sometimes we cannot decode every row in a CSV. This is how we tell
+you what went wrong. If you need to present this to someone, you can get a
+human-readable version with [`errorToString`](#errorToString)
 
 Some more detail:
 
-  - `ParsingError`: there was a problem parsing the data (the most common issue
-    is problems with quoted fields. Check that any quoted fields are closed
-    and that quotes are escaped by doubling.)
+  - `ParsingError`: there was a problem parsing the CSV into rows and
+    columns. All these errors have to do with quoting issues. Check that
+    any quoted fields are closed and that quotes are escaped.
   - `NoFieldNamesOnFirstRow`: we tried to get the field names from the first
     row (using [`FieldNames`](#FieldNames)) but couldn't find any, probably
     because the input was blank.
@@ -503,8 +518,8 @@ type Error
 
 {-| Where did the problem happen?
 
-  - `Column`: at this column number
-  - `Field`: at this named column (with optional column number if we were
+  - `Column`: at the given column number
+  - `Field`: at the given named column (with optional column number if we were
     able to look up what column we _should_ have found.)
   - `OnlyColumn`: at the only column in the row
 
@@ -528,11 +543,11 @@ locationToColumn fieldNames location =
             OnlyColumn
 
 
-{-| Things that went wrong specifically while decoding.
+{-| Things that can go wrong while decoding:
 
-  - `ColumnNotFound Int` and `FieldNotFound String`: we looked for a value
-    at a specific column, but couldn't find it. The argument specifies where
-    we tried to look.
+  - `ColumnNotFound Int` and `FieldNotFound String`: we looked for the
+    specified column, but couldn't find it. The argument specifies where we
+    tried to look.
   - `FieldNotProvided String`: we looked for a specific field, but it wasn't
     present in the first row or the provided field names (depending on your
     configuration.)
@@ -541,10 +556,9 @@ locationToColumn fieldNames location =
     columns, and you don't specify which to use with [`column`](#column)
     or [`field`](#field), you'll get this error. The argument says how many
     columns we found.
-  - `ExpectedInt String` and `ExpectedFloat String`: we tried to parse a
-    string into a number, but couldn't. The arguments specify the strings
-    we got.
-  - `Failure`: messages from [`fail`](#fail) end up here.
+  - `ExpectedInt String` and `ExpectedFloat String`: we failed to parse a
+    string into a number. The argument specifies the string we got.
+  - `Failure`: we got a custom failure message from [`fail`](#fail).
 
 -}
 type Problem
@@ -557,7 +571,7 @@ type Problem
     | Failure String
 
 
-{-| Want an human-readable version of an [`Error`](#Error)? Here we are!
+{-| Produce a human-readable version of an [`Error`](#Error)?!
 -}
 errorToString : Error -> String
 errorToString error =
@@ -654,11 +668,13 @@ errorToString error =
 -- MAPPING
 
 
-{-| Decode a value, then transform it before returning.
+{-| Transform a decoded value.
 
-    decodeCsv NoFieldNames (map (\i -> i * 2) int) "15" --> Ok [ 30 ]
+    decodeCsv NoFieldNames (map (\i -> i * 2) int) "15"
+    --> Ok [ 30 ]
 
-    decodeCsv NoFieldNames (map String.reverse string) "slap" --> Ok [ "pals" ]
+    decodeCsv NoFieldNames (map String.reverse string) "slap"
+    --> Ok [ "pals" ]
 
 -}
 map : (from -> to) -> Decoder from -> Decoder to
@@ -666,7 +682,7 @@ map transform (Decoder decoder) =
     Decoder (\location fieldNames rowNum row -> decoder location fieldNames rowNum row |> Result.map transform)
 
 
-{-| Combine two decoders to make something else, for example a tuple:
+{-| Combine two decoders to make something else.
 
     decodeCsv NoFieldNames
         (map2 Tuple.pair
@@ -711,9 +727,9 @@ map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
         )
 
 
-{-| Need to decode into an object? Use a into. The way this works: you
-provide a function that takes as many arguments as you need, and then send
-it values by providing decoders.
+{-| Combine an arbitrary amount of fields. You provide a function that takes
+as many arguments as you need, then send it values by providing decoders with
+[`pipeline`](#pipeline).
 
     type alias Pet =
         { id : Int
@@ -732,8 +748,11 @@ it values by providing decoders.
 
 Now you can decode pets like this:
 
-    decodeCsv NoFieldNames petDecoder "1,Atlas,cat,14.5"
-    --> Ok [ { id = 1, name = "Atlas", species = "cat", weight = 14.5 } ]
+    decodeCsv NoFieldNames petDecoder "1,Atlas,cat,14\r\n2,Axel,puffin,1.37"
+    --> Ok
+    -->     [ { id = 1, name = "Atlas", species = "cat", weight = 14 }
+    -->     , { id = 2, name = "Axel", species = "puffin", weight = 1.37 }
+    -->     ]
 
 -}
 into : (a -> b) -> Decoder (a -> b)
@@ -755,10 +774,20 @@ pipeline =
 {-| Try several possible decoders in sequence, committing to the first one
 that passes.
 
-    decodeCsv NoFieldNames (oneOf (map Just int) [ succeed Nothing ]) "1"
+    decodeCsv NoFieldNames
+        (oneOf
+            (map Just int)
+            [ succeed Nothing ]
+        )
+        "1"
     --> Ok [ Just 1 ]
 
-    decodeCsv NoFieldNames (oneOf (map Just int) [ succeed Nothing ]) "a"
+    decodeCsv NoFieldNames
+        (oneOf
+            (map Just int)
+            [ succeed Nothing ]
+        )
+        "a"
     --> Ok [ Nothing ]
 
 -}
@@ -787,28 +816,6 @@ recover (Decoder first) (Decoder second) =
 
                         Err { problems } ->
                             Err { err | problems = err.problems ++ problems }
-
-
-{-| Always succeed, no matter what. Mostly useful with [`andThen`](#andThen).
--}
-succeed : a -> Decoder a
-succeed value =
-    Decoder (\_ _ _ _ -> Ok value)
-
-
-{-| Always fail with the given message, no matter what. Mostly useful with
-[`andThen`](#andThen).
--}
-fail : String -> Decoder a
-fail message =
-    Decoder
-        (\location fieldNames rowNum _ ->
-            Err
-                { row = rowNum
-                , column = locationToColumn fieldNames location
-                , problems = [ Failure message ]
-                }
-        )
 
 
 {-| Decode some value _and then_ make a decoding decision based on the
@@ -851,9 +858,31 @@ andThen next (Decoder first) =
         )
 
 
+{-| Always succeed, no matter what. Mostly useful with [`andThen`](#andThen).
+-}
+succeed : a -> Decoder a
+succeed value =
+    Decoder (\_ _ _ _ -> Ok value)
+
+
+{-| Always fail with the given message, no matter what. Mostly useful with
+[`andThen`](#andThen).
+-}
+fail : String -> Decoder a
+fail message =
+    Decoder
+        (\location fieldNames rowNum _ ->
+            Err
+                { row = rowNum
+                , column = locationToColumn fieldNames location
+                , problems = [ Failure message ]
+                }
+        )
+
+
 {-| Make creating custom decoders a little easier. If you already have a
-function that parses a string into something you care about, you can probably
-provide it here and avoid having to build your own with [`andThen`](#andThen).
+function that parses into something you care about, you can combine it with
+this.
 
 For example, here's how you could parse a hexadecimal number with
 [`rtfeldman/elm-hex`](https://package.elm-lang.org/packages/rtfeldman/elm-hex/latest/):
@@ -862,8 +891,9 @@ For example, here's how you could parse a hexadecimal number with
 
     hex : Decoder Int
     hex =
-        string
-            |> andThen (fromResult << Hex.fromString)
+        andThen
+            (\value -> fromResult (Hex.fromString value))
+            string
 
     decodeCsv NoFieldNames hex "ff"
     --> Ok [ 255 ]
@@ -879,21 +909,25 @@ fromResult result =
             fail problem
 
 
-{-| Like `fromResult` but you have to specify the error message since
-`Nothing` has no further information.
+{-| Like [`fromResult`](#fromResult) but you have to specify the error
+message since `Nothing` has no further information.
 
 For example, you could implement something like [`int`](#int) using this:
 
     myInt : Decoder Int
     myInt =
-        string
-            |> andThen (fromMaybe "Expected an int" << String.toInt)
+        andThen
+            (\value ->
+                fromMaybe "Expected an int"
+                    (String.toInt value)
+            )
+            string
 
     decodeCsv NoFieldNames myInt "123"
     --> Ok [ 123 ]
 
 (That said, you probably want to use [`int`](#int) instead... it has better
-error messages!)
+error messages and is more tolerant of unusual situations!)
 
 -}
 fromMaybe : String -> Maybe a -> Decoder a
