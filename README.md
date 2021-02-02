@@ -89,21 +89,29 @@ Sure, you can use a `Result` to do whatever you like, but there's not a good way
 
 ## Contributing
 
+Hello!
+I'm so glad that you're interested in contributing to `elm-csv`!
+Just so you know, I consider this library "done".
+Unless something major changes in either the CSV standard or Elm, major changes are unlikely.
+If you want to make a case for new decoder functions (or whatever) being added to the package feel free to do so (in an issue, not a PR!), but be aware the bar is fairly high for new inclusions.
+
+That said, I'll be publishing upgrades to track with new versions of Elm, and bug fixes as needed.
+I always welcome help with those, and with documentation improvements!
+
+Still here?
+Ok, let's get set up.
 This project uses [Nix](https://nixos.org/download.html) to manage versions (but just need a `nix` installation, not NixOS, so this will work on macOS.)
 Install that, then run `nix-shell` to get into a development environment.
 
 Things I'd appreciate help with:
 
 - **Testing the parser on many kinds of CSV and TSV data.**
-  If you find that some software produces something that this library can't handle, please open an issue with a sample!
+  If you find that the parser has incorrectly interpreted some data you have, please open an issue.
+  It would be very helpful if you could include a sample of the input that's giving you problems, the versions of the software used to produce the sample, and the locale settings on your computer.
 
 - **Feedback on speed.**
-  If you find that this library has become a bottleneck in your application, please open an issue.
-
-- **Feedback on decoders for things you find necessary** (but please open an issue and talk through it instead of jumping straight to a PR!)
-  Some things I've thought of: `parse : Parser.Parser a -> Decoder a` and `json : Json.Decode.Decoder a -> Decoder a`.
-  The reason they're not in the library now is because a) `fromResult` exists to make those easier and b) I don't want to add new package-level dependencies without a good reason.
-  If you find yourself writing things like this constantly, though, let's talk about them!
+  Please let me know if you find out that parsing/decoding has become a bottleneck in your application.
+  Our parser is fairly quick (see `benchmarking` in the source) but we can always go faster.
 
 - **Docs.**
   Always docs.
