@@ -81,27 +81,10 @@ encodeTest =
                         |> Encode.encode
                             { encoder =
                                 Encode.withFieldNames
-                                    [ "ID", "Name", "Species" ]
                                     (\{ id, name, species } ->
                                         [ ( "ID", String.fromInt id )
                                         , ( "Name", name )
                                         , ( "Species", species )
-                                        ]
-                                    )
-                            , fieldSeparator = ','
-                            }
-                        |> Expect.equal "ID,Name,Species\u{000D}\n1,Atlas,cat\u{000D}\n2,Axel,puffin"
-            , test "encodes with field names even when the ordering does not match" <|
-                \_ ->
-                    pets
-                        |> Encode.encode
-                            { encoder =
-                                Encode.withFieldNames
-                                    [ "ID", "Name", "Species" ]
-                                    (\{ id, name, species } ->
-                                        [ ( "Species", species )
-                                        , ( "ID", String.fromInt id )
-                                        , ( "Name", name )
                                         ]
                                     )
                             , fieldSeparator = ','
@@ -113,22 +96,44 @@ encodeTest =
                         |> Encode.encode
                             { encoder =
                                 Encode.withFieldNames
-                                    [ "ID", "Name", "Species" ]
-                                    (\{ id, species } ->
-                                        [ ( "ID", String.fromInt id )
-                                        , ( "Species", species )
-                                        ]
+                                    (\{ id, name, species } ->
+                                        if id == 1 then
+                                            [ ( "ID", String.fromInt id )
+                                            , ( "Species", species )
+                                            ]
+
+                                        else
+                                            [ ( "ID", String.fromInt id )
+                                            , ( "Name", name )
+                                            , ( "Species", species )
+                                            ]
                                     )
                             , fieldSeparator = ','
                             }
-                        |> Expect.equal "ID,Name,Species\u{000D}\n1,,cat\u{000D}\n2,,puffin"
+                        |> Expect.equal "ID,Name,Species\u{000D}\n1,,cat\u{000D}\n2,Axel,puffin"
+            , test "uses the average of the field position when fields are sorted differently in different rows" <|
+                \_ ->
+                    [ { id = "a", name = "z" }
+                    , { id = "z", name = "a" }
+                    ]
+                        |> Encode.encode
+                            { encoder =
+                                Encode.withFieldNames
+                                    (\{ id, name } ->
+                                        List.sortBy Tuple.second
+                                            [ ( "ID", id )
+                                            , ( "Name", name )
+                                            ]
+                                    )
+                            , fieldSeparator = ','
+                            }
+                        |> Expect.equal "ID,Name\u{000D}\na,z\u{000D}\nz,a"
             , test "uses the correct separator" <|
                 \_ ->
                     pets
                         |> Encode.encode
                             { encoder =
                                 Encode.withFieldNames
-                                    [ "ID", "Name", "Species" ]
                                     (\{ id, name, species } ->
                                         [ ( "ID", String.fromInt id )
                                         , ( "Name", name )

@@ -11,7 +11,7 @@ import Dict exposing (Dict)
 
 {-| -}
 type Encoder a
-    = WithFieldNames (List String) (a -> List ( String, String ))
+    = WithFieldNames (a -> List ( String, String ))
     | WithoutFieldNames (a -> List String)
 
 
@@ -24,7 +24,6 @@ type Encoder a
         |> encode
             { encoder =
                 withFieldNames
-                    [ "red", "green", "blue" ]
                     (\( r, g, b ) ->
                         [ ( "red", r )
                         , ( "green", g )
@@ -39,7 +38,7 @@ If you provide a field name which isn't in the list for a row, it will be
 replaced with a blank field to avoid generating a misaligned CSV.
 
 -}
-withFieldNames : List String -> (a -> List ( String, String )) -> Encoder a
+withFieldNames : (a -> List ( String, String )) -> Encoder a
 withFieldNames =
     WithFieldNames
 
@@ -83,7 +82,6 @@ encode { encoder, fieldSeparator } items =
     in
     items
         |> encodeItems encoder
-        |> addFieldNames encoder
         |> List.map (String.join fieldSeparatorString << List.map (quoteIfNecessary fieldSeparatorString))
         |> String.join "\u{000D}\n"
 
@@ -91,32 +89,58 @@ encode { encoder, fieldSeparator } items =
 encodeItems : Encoder a -> List a -> List (List String)
 encodeItems encoder rows =
     case encoder of
-        WithFieldNames names convert ->
-            List.map
-                (\row ->
-                    let
-                        named : Dict String String
-                        named =
-                            Dict.fromList (convert row)
-                    in
-                    List.map
-                        (\name -> Dict.get name named |> Maybe.withDefault "")
-                        names
-                )
-                rows
+        WithFieldNames convert ->
+            let
+                ( converted, namePositions ) =
+                    List.foldr
+                        (\row ( converted_, names ) ->
+                            let
+                                convertedRow =
+                                    convert row
+                            in
+                            ( Dict.fromList convertedRow :: converted_
+                            , List.foldl
+                                (\( name, _ ) ( soFar, column ) ->
+                                    ( Dict.update name
+                                        (\value ->
+                                            case value of
+                                                Just columns ->
+                                                    Just (column :: columns)
+
+                                                Nothing ->
+                                                    Just [ column ]
+                                        )
+                                        soFar
+                                    , column + 1
+                                    )
+                                )
+                                ( names, 0 )
+                                convertedRow
+                                |> Tuple.first
+                            )
+                        )
+                        ( [], Dict.empty )
+                        rows
+
+                ordering : List String
+                ordering =
+                    namePositions
+                        |> Dict.map (\_ positions -> List.sum positions / toFloat (List.length positions))
+                        |> Dict.toList
+                        |> List.sortBy Tuple.second
+                        |> List.map Tuple.first
+            in
+            ordering
+                :: List.map
+                    (\row ->
+                        List.map
+                            (\field -> Dict.get field row |> Maybe.withDefault "")
+                            ordering
+                    )
+                    converted
 
         WithoutFieldNames convert ->
             List.map convert rows
-
-
-addFieldNames : Encoder a -> List (List String) -> List (List String)
-addFieldNames encoder rows =
-    case encoder of
-        WithFieldNames names _ ->
-            names :: rows
-
-        WithoutFieldNames _ ->
-            rows
 
 
 quoteIfNecessary : String -> String -> String
