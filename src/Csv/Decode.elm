@@ -314,7 +314,7 @@ blank : Decoder a -> Decoder (Maybe a)
 blank decoder =
     andThen
         (\maybeBlank ->
-            if String.isEmpty maybeBlank then
+            if String.isEmpty (String.trim maybeBlank) then
                 succeed Nothing
 
             else

@@ -142,6 +142,16 @@ blankTest =
                 ""
                     |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
                     |> Expect.equal (Ok [])
+        , test "when the field contains spaces" <|
+            \_ ->
+                "  "
+                    |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
+                    |> Expect.equal (Ok [ Nothing ])
+        , test "when the field contains whitespace characters" <|
+            \_ ->
+                "\"\u{00A0}\t\n\""
+                    |> Decode.decodeCsv NoFieldNames (Decode.blank Decode.int)
+                    |> Expect.equal (Ok [ Nothing ])
         , test "when the field is non-blank but not valid for the decoder" <|
             \_ ->
                 "banana"
