@@ -304,7 +304,8 @@ float =
                     Err (ExpectedFloat value)
 
 
-{-| Handle blank fields by making them into `Maybe`s.
+{-| Handle blank fields by turning them into `Maybe`s. We consider a field
+to be blank if it's empty or consists solely of whitespace characters.
 
     decodeCsv NoFieldNames (blank int) "\r\n1"
     --> Ok [ Nothing, Just 1 ]
