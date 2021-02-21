@@ -1,4 +1,4 @@
-# elm-csv
+# BrianHicks/elm-csv
 
 Decode CSV in the most boring way possible.
 Other CSV libraries have exciting, innovative APIs... not this one!
