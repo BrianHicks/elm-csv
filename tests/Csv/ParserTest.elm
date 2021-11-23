@@ -74,7 +74,7 @@ parseTest =
                                     -- caught in other places.
                                     Expect.pass
 
-                                Just ( first, "" ) ->
+                                Just ( _, "" ) ->
                                     -- not relevant here
                                     Expect.pass
 
