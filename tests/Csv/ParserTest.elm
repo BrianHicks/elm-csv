@@ -131,6 +131,12 @@ parseTest =
                                             , [ "Brazil", "212652000" ]
                                             ]
                                         )
+                        , test "a trailing newline after a quoted field should be ignored" <|
+                            -- https://github.com/BrianHicks/elm-csv/issues/24
+                            \_ ->
+                                ("\"val\"" ++ config.rowSeparator)
+                                    |> parse { fieldSeparator = config.fieldSeparator }
+                                    |> Expect.equal (Ok [ [ "val" ] ])
                         , describe "errors"
                             [ test "not ending a quoted value is an error" <|
                                 \_ ->

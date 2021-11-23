@@ -51,7 +51,7 @@ parse config source =
                     segment =
                         String.slice startOffset endOffset source
                 in
-                if (endOffset + 2) - finalLength >= 0 then
+                if (endOffset + 1) - finalLength >= 0 then
                     Ok
                         ( soFar ++ segment
                         , endOffset + 1
