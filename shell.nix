@@ -14,9 +14,9 @@ stdenv.mkDerivation {
     elmPackages.elm
     elmPackages.elm-format
     elmPackages.elm-json
+    elmPackages.elm-review
     elmPackages.elm-test
     elmPackages.elm-verify-examples
-    elmPackages.elm-review
 
     # to get remote stuff in CI
     cacert
