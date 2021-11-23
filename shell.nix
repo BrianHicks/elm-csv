@@ -13,6 +13,7 @@ stdenv.mkDerivation {
     # elm
     elmPackages.elm
     elmPackages.elm-format
+    elmPackages.elm-json
     elmPackages.elm-test
     elmPackages.elm-verify-examples
     elmPackages.elm-review
