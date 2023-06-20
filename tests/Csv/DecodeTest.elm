@@ -596,3 +596,18 @@ fromMaybeTest =
                             )
                         )
         ]
+
+
+optionalTest : Test
+optionalTest =
+    describe "optional"
+        [ test "succeds when missing column" <|
+            \() ->
+                "foo\u{000D}\n1"
+                    |> Decode.decodeCsv FieldNamesFromFirstRow
+                        (Decode.into Tuple.pair
+                            |> Decode.optional (Decode.field "bar" Decode.int)
+                            |> Decode.required (Decode.field "foo" Decode.int)
+                        )
+                    |> Expect.equal (Ok [ ( Nothing, 1 ) ])
+        ]

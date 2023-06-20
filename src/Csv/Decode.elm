@@ -2,7 +2,7 @@ module Csv.Decode exposing
     ( Decoder, string, int, float, blank
     , column, field
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
-    , map, map2, map3, into, pipeline
+    , map, map2, map3, into, required, optional
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe
     )
 
@@ -80,7 +80,7 @@ that takes more arguments.
 
 ## Transforming Values
 
-@docs map, map2, map3, into, pipeline
+@docs map, map2, map3, into, required, optional
 
 
 ## Fancy Decoding
@@ -740,10 +740,10 @@ as many arguments as you need, then send it values by providing decoders with
     petDecoder : Decoder Pet
     petDecoder =
         into Pet
-            |> pipeline (column 0 int)
-            |> pipeline (column 1 string)
-            |> pipeline (column 2 string)
-            |> pipeline (column 3 float)
+            |> required (column 0 int)
+            |> required (column 1 string)
+            |> required (column 2 string)
+            |> required (column 3 float)
 
 Now you can decode pets like this:
 
@@ -761,9 +761,57 @@ into =
 
 {-| See [`into`](#into).
 -}
-pipeline : Decoder a -> Decoder (a -> b) -> Decoder b
-pipeline =
+required : Decoder a -> Decoder (a -> b) -> Decoder b
+required =
     map2 (\value fn -> fn value)
+
+
+{-| Like `required`, but tolerates if a column isn't provided at all.
+
+type alias Pet =
+{ id : Int
+, name : Maybe String
+}
+
+    petDecoder : Decoder Pet
+    petDecoder =
+        into Pet
+            |> required (field "id" int)
+            |> optional (field "name" string)
+
+Now you can decode pets like this:
+
+    decodeCsv FieldNamesFromFirstRow petDecoder "id,name\r\n1,Atlas\r\n2,Axel"
+    --> Ok
+    -->     [ { id = 1, name = Just "Atlas" }
+    -->     , { id = 2, name = Just "Axel" }
+    -->     ]
+
+As well as:
+
+    decodeCsv FieldNamesFromFirstRow petDecoder "id\r\n1\r\n2"
+    --> Ok
+    -->     [ { id = 1, name = Nothing }
+    -->     , { id = 2, name = Nothing }
+    -->     ]
+
+-}
+optional : Decoder a -> Decoder (Maybe a -> b) -> Decoder b
+optional (Decoder decoder) (Decoder decoderFn) =
+    Decoder
+        (\location fieldNames rowNum row ->
+            case decoder location fieldNames rowNum row of
+                Ok v ->
+                    Result.map (\fn -> fn (Just v)) (decoderFn location fieldNames rowNum row)
+
+                Err err ->
+                    case err.problems of
+                        [ FieldNotProvided _ ] ->
+                            Result.map (\fn -> fn Nothing) (decoderFn location fieldNames rowNum row)
+
+                        _ ->
+                            Err err
+        )
 
 
 
