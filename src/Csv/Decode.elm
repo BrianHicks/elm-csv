@@ -1,6 +1,6 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float, blank
-    , column, field
+    , column, field, optionalField
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe
@@ -70,7 +70,7 @@ that takes more arguments.
 
 ## Finding Values
 
-@docs column, field
+@docs column, field, optionalField
 
 
 ## Running Decoders
@@ -367,6 +367,34 @@ these names, see [`FieldNames`](#FieldNames)
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Field_ name) fieldNames row)
+
+
+{-| Like `field`, parse a value at a named column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Country\r\nArgentina"
+    --> Ok [ Just "Argentina" ]
+
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Pie\r\Apple"
+    --> Ok [ Nothing ]
+
+-}
+optionalField : String -> Decoder a -> Decoder (Maybe a)
+optionalField name (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if Dict.member name fieldNames then
+                Result.map Just (decoder (Field_ name) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
 
 
 
