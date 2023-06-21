@@ -91,6 +91,7 @@ that takes more arguments.
 
 import Csv.Parser as Parser
 import Dict exposing (Dict)
+import Set
 
 
 
@@ -610,10 +611,18 @@ errorToString error =
                         Failure custom ->
                             custom
 
-                rowAndColumnString : { a | row : Int, column : Column } -> String
+                rowAndColumnString : { a | startRow : Int, endRow : Int, column : Column } -> String
                 rowAndColumnString err =
-                    "row "
-                        ++ String.fromInt err.row
+                    (case err.endRow - err.startRow of
+                        0 ->
+                            "row " ++ String.fromInt err.startRow
+
+                        1 ->
+                            "rows " ++ String.fromInt err.startRow ++ " and " ++ String.fromInt err.endRow
+
+                        _ ->
+                            "rows " ++ String.fromInt err.startRow ++ "–" ++ String.fromInt err.endRow
+                    )
                         ++ ", "
                         ++ (case err.column of
                                 Column col ->
@@ -629,38 +638,102 @@ errorToString error =
                                     "column 0 (the only column present)"
                            )
 
-                errString : { row : Int, column : Column, problems : List Problem } -> String
+                errString : { startRow : Int, endRow : Int, column : Column, problem : Problem } -> String
                 errString err =
-                    case List.map problemString err.problems of
+                    "There was a problem on "
+                        ++ rowAndColumnString err
+                        ++ ": "
+                        ++ problemString err.problem
+
+                dedupeHelp :
+                    List { startRow : Int, endRow : Int, column : Column, problem : Problem }
+                    -> List { row : Int, column : Column, problem : Problem }
+                    -> List { row : Int, column : Column, problem : Problem }
+                    -> List { startRow : Int, endRow : Int, column : Column, problem : Problem }
+                dedupeHelp soFar prevGroup errors =
+                    case errors of
                         [] ->
-                            "There was an internal error while generating an error on "
-                                ++ rowAndColumnString err
-                                ++ " and I don't have any info about what went wrong. Please open an issue!"
+                            case prevGroup of
+                                [] ->
+                                    List.reverse soFar
 
-                        [ only ] ->
-                            "There was a problem on "
-                                ++ rowAndColumnString err
-                                ++ ": "
-                                ++ only
+                                head :: tail ->
+                                    List.reverse ({ startRow = List.reverse tail |> List.head |> Maybe.withDefault head |> .row, endRow = head.row, column = head.column, problem = head.problem } :: soFar)
 
-                        many ->
-                            "There were some problems on "
-                                ++ rowAndColumnString err
-                                ++ ":\n\n"
-                                ++ String.join "\n" (List.map (\problem -> " - " ++ problem) many)
+                        err :: rest ->
+                            case prevGroup of
+                                [] ->
+                                    dedupeHelp soFar (err :: prevGroup) rest
+
+                                head :: tail ->
+                                    if head.problem == err.problem && head.row + 1 == err.row && head.column == err.column then
+                                        dedupeHelp soFar (err :: prevGroup) rest
+
+                                    else
+                                        dedupeHelp ({ startRow = List.reverse tail |> List.head |> Maybe.withDefault head |> .row, endRow = head.row, column = head.column, problem = head.problem } :: soFar) [ err ] rest
+
+                dedupeErrs : List { row : Int, column : Column, problems : List Problem } -> List { startRow : Int, endRow : Int, column : Column, problem : Problem }
+                dedupeErrs =
+                    List.concatMap (\err -> List.map (\problem -> { row = err.row, column = err.column, problem = problem }) err.problems)
+                        >> List.sortBy
+                            (\{ row, problem } ->
+                                case problem of
+                                    ColumnNotFound i ->
+                                        ( 1, "", row )
+
+                                    FieldNotFound name ->
+                                        ( 2, name, row )
+
+                                    FieldNotProvided name ->
+                                        ( 3, name, row )
+
+                                    ExpectedOneColumn howMany ->
+                                        ( 4, String.fromInt howMany, row )
+
+                                    ExpectedInt notInt ->
+                                        ( 5, notInt, row )
+
+                                    ExpectedFloat notFloat ->
+                                        ( 6, notFloat, row )
+
+                                    Failure custom ->
+                                        ( 7, custom, row )
+                            )
+                        >> dedupeHelp [] []
+
+                ( missingFieldNames, local ) =
+                    List.foldr
+                        (\err ( fieldsNotFound, rest ) ->
+                            case err.problems of
+                                [ FieldNotProvided name ] ->
+                                    ( Set.insert name fieldsNotFound, rest )
+
+                                _ ->
+                                    ( fieldsNotFound, err :: rest )
+                        )
+                        ( Set.empty, [] )
+                        errs
             in
-            case errs of
-                [] ->
+            case ( Set.toList missingFieldNames, dedupeErrs local ) of
+                ( [], [] ) ->
                     "Something went wrong, but I got an blank error list so I don't know what it was. Please open an issue!"
 
-                [ only ] ->
+                ( fields, [] ) ->
+                    "Expected to find the following fields in the header: " ++ String.join ", " fields
+
+                ( [], [ only ] ) ->
                     errString only
 
-                many ->
+                ( fields, localErrors ) ->
                     "I saw "
-                        ++ String.fromInt (List.length many)
+                        ++ String.fromInt (List.length fields + List.length local)
                         ++ " problems while decoding this CSV:\n\n"
-                        ++ String.join "\n\n" (List.map errString errs)
+                        ++ String.join "\n\n"
+                            (List.concat
+                                [ [ "Expected to find the following fields in the header: " ++ String.join ", " fields ]
+                                , List.map errString localErrors
+                                ]
+                            )
 
 
 
