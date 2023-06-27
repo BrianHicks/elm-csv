@@ -1,6 +1,6 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float, blank
-    , column, field, optionalField
+    , column, field, optionalColumn, optionalField
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe
@@ -70,7 +70,7 @@ that takes more arguments.
 
 ## Finding Values
 
-@docs column, field, optionalField
+@docs column, field, optionalColumn, optionalField
 
 
 ## Running Decoders
@@ -354,6 +354,27 @@ column col (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Column_ col) fieldNames row)
 
 
+{-| Like `column`, parse a value at a numbered column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        NoFieldNames
+        (optionalColumn 1 string)
+        "Pie\r\nApple,Argentina"
+    --> Ok [ Nothing, Just "Argentina" ]
+
+-}
+optionalColumn : Int -> Decoder a -> Decoder (Maybe a)
+optionalColumn col (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if col < List.length row then
+                Result.map Just (decoder (Column_ col) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
+
+
 {-| Parse a value at a named column. There are a number of ways to provide
 these names, see [`FieldNames`](#FieldNames)
 
@@ -381,7 +402,7 @@ field name (Decoder decoder) =
     decodeCsv
         FieldNamesFromFirstRow
         (optionalField "Country" string)
-        "Pie\r\Apple"
+        "Pie\r\nApple"
     --> Ok [ Nothing ]
 
 -}
