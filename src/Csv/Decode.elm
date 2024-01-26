@@ -91,7 +91,6 @@ that takes more arguments.
 
 import Csv.Parser as Parser
 import Dict exposing (Dict)
-import Set
 
 
 
@@ -116,6 +115,7 @@ fromString convert =
     Decoder <|
         \location fieldNames rowNum row ->
             let
+                error : Problem -> Result (List DecodingError) a
                 error problem =
                     Err
                         [ FieldDecodingError
@@ -760,7 +760,7 @@ errorToString error =
                             case err of
                                 FieldDecodingError { problem, row } ->
                                     case problem of
-                                        ColumnNotFound i ->
+                                        ColumnNotFound _ ->
                                             ( 1, "", row )
 
                                         FieldNotFound name ->
