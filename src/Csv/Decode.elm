@@ -1,6 +1,6 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float, blank
-    , column, field
+    , column, field, optionalColumn, optionalField
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), DecodingError(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe
@@ -70,7 +70,7 @@ that takes more arguments.
 
 ## Finding Values
 
-@docs column, field
+@docs column, field, optionalColumn, optionalField
 
 
 ## Running Decoders
@@ -184,10 +184,11 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames string "a,b"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
-    -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
-    -->           }
+    -->         [ FieldDecodingError
+    -->             { row = 0
+    -->             , column = OnlyColumn
+    -->             , problem =  ExpectedOneColumn 2
+    -->             }
     -->         ]
     -->     )
 
@@ -204,9 +205,10 @@ string =
     decodeCsv NoFieldNames int "volcano"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedInt "volcano" ]
+    -->           , problem = ExpectedInt "volcano"
     -->           }
     -->         ]
     -->     )
@@ -217,9 +219,10 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames int "1,2"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
+    -->           , problem = ExpectedOneColumn 2
     -->           }
     -->         ]
     -->     )
@@ -244,9 +247,10 @@ int =
     decodeCsv NoFieldNames float "mimesis"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedFloat "mimesis" ]
+    -->           , problem = ExpectedFloat "mimesis"
     -->           }
     -->         ]
     -->     )
@@ -257,9 +261,10 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames float "1.0,2.0"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
+    -->           , problem = ExpectedOneColumn 2
     -->           }
     -->         ]
     -->     )
@@ -314,9 +319,10 @@ type Location
     decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = Column 100
-    -->           , problems = [ ColumnNotFound 100 ]
+    -->           , problem =  ColumnNotFound 100
     -->           }
     -->         ]
     -->     )
@@ -325,6 +331,27 @@ type Location
 column : Int -> Decoder a -> Decoder a
 column col (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Column_ col) fieldNames row)
+
+
+{-| Like `column`, parse a value at a numbered column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        NoFieldNames
+        (optionalColumn 1 string)
+        "Pie\r\nApple,Argentina"
+    --> Ok [ Nothing, Just "Argentina" ]
+
+-}
+optionalColumn : Int -> Decoder a -> Decoder (Maybe a)
+optionalColumn col (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if col < List.length row then
+                Result.map Just (decoder (Column_ col) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
 
 
 {-| Parse a value at a named column. There are a number of ways to provide
@@ -340,6 +367,34 @@ these names, see [`FieldNames`](#FieldNames)
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Field_ name) fieldNames row)
+
+
+{-| Like `field`, parse a value at a named column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Country\r\nArgentina"
+    --> Ok [ Just "Argentina" ]
+
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Pie\r\nApple"
+    --> Ok [ Nothing ]
+
+-}
+optionalField : String -> Decoder a -> Decoder (Maybe a)
+optionalField name (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if Dict.member name fieldNames then
+                Result.map Just (decoder (Field_ name) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
 
 
 
