@@ -322,7 +322,7 @@ type Location
     -->         [ FieldDecodingError
     -->           { row = 0
     -->           , column = Column 100
-    -->           , problem =  ColumnNotFound 100
+    -->           , problem = ColumnNotFound 100
     -->           }
     -->         ]
     -->     )
