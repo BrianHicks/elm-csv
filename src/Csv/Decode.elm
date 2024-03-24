@@ -1,7 +1,7 @@
 module Csv.Decode exposing
     ( Decoder, string, int, float, blank
-    , column, field
-    , FieldNames(..), decodeCsv, decodeCustom, Error(..), errorToString, Column(..), Problem(..)
+    , column, field, optionalColumn, optionalField
+    , FieldNames(..), decodeCsv, decodeCustom, Error(..), DecodingError(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
     , oneOf, andThen, succeed, fail, fromResult, fromMaybe, availableFields
     )
@@ -70,12 +70,12 @@ that takes more arguments.
 
 ## Finding Values
 
-@docs column, field
+@docs column, field, optionalColumn, optionalField
 
 
 ## Running Decoders
 
-@docs FieldNames, decodeCsv, decodeCustom, Error, errorToString, Column, Problem
+@docs FieldNames, decodeCsv, decodeCustom, Error, DecodingError, errorToString, Column, Problem
 
 
 ## Transforming Values
@@ -106,13 +106,7 @@ type Decoder a
          -> Dict String Int
          -> Int
          -> List String
-         ->
-            Result
-                { row : Int
-                , column : Column
-                , problems : List Problem
-                }
-                a
+         -> Result (List DecodingError) a
         )
 
 
@@ -120,6 +114,17 @@ fromString : (String -> Result Problem a) -> Decoder a
 fromString convert =
     Decoder <|
         \location fieldNames rowNum row ->
+            let
+                error : Problem -> Result (List DecodingError) a
+                error problem =
+                    Err
+                        [ FieldDecodingError
+                            { row = rowNum
+                            , column = locationToColumn fieldNames location
+                            , problem = problem
+                            }
+                        ]
+            in
             case location of
                 Column_ colNum ->
                     case row |> List.drop colNum |> List.head of
@@ -129,18 +134,10 @@ fromString convert =
                                     Ok converted
 
                                 Err problem ->
-                                    Err
-                                        { row = rowNum
-                                        , column = locationToColumn fieldNames location
-                                        , problems = [ problem ]
-                                        }
+                                    error problem
 
                         Nothing ->
-                            Err
-                                { row = rowNum
-                                , column = locationToColumn fieldNames location
-                                , problems = [ ColumnNotFound colNum ]
-                                }
+                            error (ColumnNotFound colNum)
 
                 Field_ name ->
                     case Dict.get name fieldNames of
@@ -152,34 +149,18 @@ fromString convert =
                                             Ok converted
 
                                         Err problem ->
-                                            Err
-                                                { row = rowNum
-                                                , column = locationToColumn fieldNames location
-                                                , problems = [ problem ]
-                                                }
+                                            error problem
 
                                 Nothing ->
-                                    Err
-                                        { row = rowNum
-                                        , column = locationToColumn fieldNames location
-                                        , problems = [ FieldNotFound name ]
-                                        }
+                                    error (FieldNotFound name)
 
                         Nothing ->
-                            Err
-                                { row = rowNum
-                                , column = locationToColumn fieldNames location
-                                , problems = [ FieldNotProvided name ]
-                                }
+                            Err [ FieldNotProvided name ]
 
                 OnlyColumn_ ->
                     case row of
                         [] ->
-                            Err
-                                { row = rowNum
-                                , column = locationToColumn fieldNames location
-                                , problems = [ ColumnNotFound 0 ]
-                                }
+                            error (ColumnNotFound 0)
 
                         [ only ] ->
                             case convert only of
@@ -187,18 +168,10 @@ fromString convert =
                                     Ok converted
 
                                 Err problem ->
-                                    Err
-                                        { row = rowNum
-                                        , column = locationToColumn fieldNames location
-                                        , problems = [ problem ]
-                                        }
+                                    error problem
 
                         _ ->
-                            Err
-                                { row = rowNum
-                                , column = locationToColumn fieldNames location
-                                , problems = [ ExpectedOneColumn (List.length row) ]
-                                }
+                            error (ExpectedOneColumn (List.length row))
 
 
 {-| Decode a string.
@@ -211,10 +184,11 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames string "a,b"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
-    -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
-    -->           }
+    -->         [ FieldDecodingError
+    -->             { row = 0
+    -->             , column = OnlyColumn
+    -->             , problem =  ExpectedOneColumn 2
+    -->             }
     -->         ]
     -->     )
 
@@ -231,9 +205,10 @@ string =
     decodeCsv NoFieldNames int "volcano"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedInt "volcano" ]
+    -->           , problem = ExpectedInt "volcano"
     -->           }
     -->         ]
     -->     )
@@ -244,9 +219,10 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames int "1,2"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
+    -->           , problem = ExpectedOneColumn 2
     -->           }
     -->         ]
     -->     )
@@ -271,9 +247,10 @@ int =
     decodeCsv NoFieldNames float "mimesis"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedFloat "mimesis" ]
+    -->           , problem = ExpectedFloat "mimesis"
     -->           }
     -->         ]
     -->     )
@@ -284,9 +261,10 @@ there is only one column in the CSV and try to decode that.
     decodeCsv NoFieldNames float "1.0,2.0"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = OnlyColumn
-    -->           , problems = [ ExpectedOneColumn 2 ]
+    -->           , problem = ExpectedOneColumn 2
     -->           }
     -->         ]
     -->     )
@@ -341,9 +319,10 @@ type Location
     decodeCsv NoFieldNames (column 100 float) "3.14"
     --> Err
     -->     (DecodingErrors
-    -->         [ { row = 0
+    -->         [ FieldDecodingError
+    -->           { row = 0
     -->           , column = Column 100
-    -->           , problems = [ ColumnNotFound 100 ]
+    -->           , problem = ColumnNotFound 100
     -->           }
     -->         ]
     -->     )
@@ -352,6 +331,27 @@ type Location
 column : Int -> Decoder a -> Decoder a
 column col (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Column_ col) fieldNames row)
+
+
+{-| Like `column`, parse a value at a numbered column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        NoFieldNames
+        (optionalColumn 1 string)
+        "Pie\r\nApple,Argentina"
+    --> Ok [ Nothing, Just "Argentina" ]
+
+-}
+optionalColumn : Int -> Decoder a -> Decoder (Maybe a)
+optionalColumn col (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if col < List.length row then
+                Result.map Just (decoder (Column_ col) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
 
 
 {-| Parse a value at a named column. There are a number of ways to provide
@@ -367,6 +367,34 @@ these names, see [`FieldNames`](#FieldNames)
 field : String -> Decoder a -> Decoder a
 field name (Decoder decoder) =
     Decoder (\_ fieldNames row -> decoder (Field_ name) fieldNames row)
+
+
+{-| Like `field`, parse a value at a named column. The parsing succeeds even if the column is missing.
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Country\r\nArgentina"
+    --> Ok [ Just "Argentina" ]
+
+
+    decodeCsv
+        FieldNamesFromFirstRow
+        (optionalField "Country" string)
+        "Pie\r\nApple"
+    --> Ok [ Nothing ]
+
+-}
+optionalField : String -> Decoder a -> Decoder (Maybe a)
+optionalField name (Decoder decoder) =
+    Decoder
+        (\_ fieldNames rowNum row ->
+            if Dict.member name fieldNames then
+                Result.map Just (decoder (Field_ name) fieldNames rowNum row)
+
+            else
+                Ok Nothing
+        )
 
 
 {-| Returns all available field names. The behavior depends on your configuration:
@@ -497,7 +525,7 @@ applyDecoder fieldNames (Decoder decode) allRows =
                     ( Ok [], firstRowNumber )
                 |> Tuple.first
                 |> Result.map List.reverse
-                |> Result.mapError (DecodingErrors << List.reverse)
+                |> Result.mapError (DecodingErrors << List.concat << List.reverse)
         )
         (getFieldNames fieldNames allRows)
 
@@ -515,19 +543,28 @@ Some more detail:
     row (using [`FieldNames`](#FieldNames)) but couldn't find any, probably
     because the input was blank.
   - `DecodingErrors`: we couldn't decode a value using the specified
-    decoder. See [`Problem`](#Problem) for more details.
+    decoder. See [`DecodingError`](#DecodingError) for more details.
 
 -}
 type Error
     = ParsingError Parser.Problem
     | NoFieldNamesOnFirstRow
-    | DecodingErrors
-        (List
-            { row : Int
-            , column : Column
-            , problems : List Problem
-            }
-        )
+    | DecodingErrors (List DecodingError)
+
+
+{-| Errors when decoding can either be:
+
+  - Focused on decoding a single field (`FieldDecodingError`), in which case there
+    is a specific [`Problem`](#Problem) in a specific location.
+  - A result of a [`oneOf`](#oneOf) where all branches failed (`OneOfDecodingError`).
+  - A problem with the header row or configuration where a column is simply
+    missing (`FieldNotProvided`).
+
+-}
+type DecodingError
+    = FieldDecodingError { row : Int, column : Column, problem : Problem }
+    | OneOfDecodingError Int (List DecodingError)
+    | FieldNotProvided String
 
 
 {-| Where did the problem happen?
@@ -562,9 +599,6 @@ locationToColumn fieldNames location =
   - `ColumnNotFound Int` and `FieldNotFound String`: we looked for the
     specified column, but couldn't find it. The argument specifies where we
     tried to look.
-  - `FieldNotProvided String`: we looked for a specific field, but it wasn't
-    present in the first row or the provided field names (depending on your
-    configuration.)
   - `ExpectedOneColumn Int`: basic decoders like [`string`](#string) and
     [`int`](#int) expect to find a single column per row. If there are multiple
     columns, and you don't specify which to use with [`column`](#column)
@@ -578,7 +612,6 @@ locationToColumn fieldNames location =
 type Problem
     = ColumnNotFound Int
     | FieldNotFound String
-    | FieldNotProvided String
     | ExpectedOneColumn Int
     | ExpectedInt String
     | ExpectedFloat String
@@ -610,9 +643,6 @@ errorToString error =
                         FieldNotFound name ->
                             "I couldn't find the `" ++ name ++ "` column."
 
-                        FieldNotProvided name ->
-                            "The `" ++ name ++ "` field wasn't provided in the field names."
-
                         ExpectedOneColumn howMany ->
                             "I expected exactly one column, but there were " ++ String.fromInt howMany ++ "."
 
@@ -625,57 +655,168 @@ errorToString error =
                         Failure custom ->
                             custom
 
-                rowAndColumnString : { a | row : Int, column : Column } -> String
-                rowAndColumnString err =
-                    "row "
-                        ++ String.fromInt err.row
-                        ++ ", "
-                        ++ (case err.column of
-                                Column col ->
-                                    "column " ++ String.fromInt col
+                columnString : { b | column : Column } -> String
+                columnString err =
+                    case err.column of
+                        Column col ->
+                            "column " ++ String.fromInt col
 
-                                Field name Nothing ->
-                                    "in the `" ++ name ++ "` field"
+                        Field name Nothing ->
+                            "in the `" ++ name ++ "` field"
 
-                                Field name (Just col) ->
-                                    "in the `" ++ name ++ "` field (column " ++ String.fromInt col ++ ")"
+                        Field name (Just col) ->
+                            "in the `" ++ name ++ "` field (column " ++ String.fromInt col ++ ")"
 
-                                OnlyColumn ->
-                                    "column 0 (the only column present)"
-                           )
+                        OnlyColumn ->
+                            "column 0 (the only column present)"
 
-                errString : { row : Int, column : Column, problems : List Problem } -> String
+                rowString : { a | startRow : Int, endRow : Int } -> String
+                rowString loc =
+                    case loc.endRow - loc.startRow of
+                        0 ->
+                            "row " ++ String.fromInt loc.startRow
+
+                        1 ->
+                            "rows " ++ String.fromInt loc.startRow ++ " and " ++ String.fromInt loc.endRow
+
+                        _ ->
+                            "rows " ++ String.fromInt loc.startRow ++ "–" ++ String.fromInt loc.endRow
+
+                errString : DecodingError -> String
                 errString err =
-                    case List.map problemString err.problems of
-                        [] ->
-                            "There was an internal error while generating an error on "
-                                ++ rowAndColumnString err
-                                ++ " and I don't have any info about what went wrong. Please open an issue!"
-
-                        [ only ] ->
-                            "There was a problem on "
-                                ++ rowAndColumnString err
+                    case err of
+                        FieldDecodingError fde ->
+                            columnString fde
                                 ++ ": "
-                                ++ only
+                                ++ problemString fde.problem
 
-                        many ->
-                            "There were some problems on "
-                                ++ rowAndColumnString err
-                                ++ ":\n\n"
-                                ++ String.join "\n" (List.map (\problem -> " - " ++ problem) many)
+                        OneOfDecodingError _ oodes ->
+                            "all of the following decoders failed, but at least one must succeed:\n"
+                                ++ String.join "\n"
+                                    (List.indexedMap
+                                        (\i e ->
+                                            "  (" ++ String.fromInt (i + 1) ++ ") " ++ errString e
+                                        )
+                                        oodes
+                                    )
+
+                        FieldNotProvided name ->
+                            "field " ++ name ++ "was not provided"
+
+                topLevelErrString : { startRow : Int, endRow : Int, error : DecodingError } -> String
+                topLevelErrString err =
+                    (case err.error of
+                        FieldDecodingError _ ->
+                            "There was a problem on " ++ rowString err ++ ", "
+
+                        OneOfDecodingError _ _ ->
+                            "There was a problem on " ++ rowString err ++ " - "
+
+                        FieldNotProvided _ ->
+                            "There was a problem in the header: "
+                    )
+                        ++ errString err.error
+
+                isContiguous : DecodingError -> DecodingError -> Bool
+                isContiguous errA errB =
+                    case ( errA, errB ) of
+                        ( FieldDecodingError a, FieldDecodingError b ) ->
+                            a.problem == b.problem && a.row + 1 == b.row && a.column == b.column
+
+                        ( OneOfDecodingError aRow aList, OneOfDecodingError bRow bList ) ->
+                            aRow + 1 == bRow && List.length aList == List.length bList && List.all identity (List.map2 isContiguous aList bList)
+
+                        _ ->
+                            errA == errB
+
+                getRow : DecodingError -> Int
+                getRow decErr =
+                    case decErr of
+                        FieldDecodingError e ->
+                            e.row
+
+                        OneOfDecodingError row _ ->
+                            row
+
+                        FieldNotProvided _ ->
+                            0
+
+                dedupeHelp :
+                    List { startRow : Int, endRow : Int, error : DecodingError }
+                    -> List DecodingError
+                    -> List DecodingError
+                    -> List { startRow : Int, endRow : Int, error : DecodingError }
+                dedupeHelp soFar prevGroup errors =
+                    case errors of
+                        [] ->
+                            case prevGroup of
+                                [] ->
+                                    List.reverse soFar
+
+                                head :: tail ->
+                                    List.reverse ({ startRow = List.reverse tail |> List.head |> Maybe.withDefault head |> getRow, endRow = getRow head, error = head } :: soFar)
+
+                        err :: rest ->
+                            case prevGroup of
+                                [] ->
+                                    dedupeHelp soFar (err :: prevGroup) rest
+
+                                head :: tail ->
+                                    if isContiguous head err then
+                                        dedupeHelp soFar (err :: prevGroup) rest
+
+                                    else
+                                        dedupeHelp ({ startRow = List.reverse tail |> List.head |> Maybe.withDefault head |> getRow, endRow = getRow head, error = head } :: soFar) [ err ] rest
+
+                dedupeErrs : List DecodingError -> List { startRow : Int, endRow : Int, error : DecodingError }
+                dedupeErrs =
+                    List.sortBy
+                        (\err ->
+                            case err of
+                                FieldDecodingError { problem, row } ->
+                                    case problem of
+                                        ColumnNotFound _ ->
+                                            ( 1, "", row )
+
+                                        FieldNotFound name ->
+                                            ( 2, name, row )
+
+                                        ExpectedOneColumn howMany ->
+                                            ( 3, String.fromInt howMany, row )
+
+                                        ExpectedInt notInt ->
+                                            ( 4, notInt, row )
+
+                                        ExpectedFloat notFloat ->
+                                            ( 5, notFloat, row )
+
+                                        Failure custom ->
+                                            ( 6, custom, row )
+
+                                OneOfDecodingError row list ->
+                                    -- This isn't completely foolproof, as if there are more than one
+                                    -- OneOfDecodingErrors per row that have the same number of branches,
+                                    -- this will fail to group them.
+                                    ( 7, String.fromInt (List.length list), row )
+
+                                FieldNotProvided name ->
+                                    ( 8, name, 0 )
+                        )
+                        >> dedupeHelp [] []
+                        >> List.sortBy (\{ startRow } -> startRow)
             in
-            case errs of
+            case dedupeErrs errs of
                 [] ->
                     "Something went wrong, but I got an blank error list so I don't know what it was. Please open an issue!"
 
                 [ only ] ->
-                    errString only
+                    topLevelErrString only
 
-                many ->
+                multiple ->
                     "I saw "
-                        ++ String.fromInt (List.length many)
+                        ++ String.fromInt (List.length multiple)
                         ++ " problems while decoding this CSV:\n\n"
-                        ++ String.join "\n\n" (List.map errString errs)
+                        ++ String.join "\n\n" (List.map topLevelErrString multiple)
 
 
 
@@ -711,9 +852,18 @@ map2 : (a -> b -> c) -> Decoder a -> Decoder b -> Decoder c
 map2 transform (Decoder decodeA) (Decoder decodeB) =
     Decoder
         (\location fieldNames rowNum row ->
-            Result.map2 transform
-                (decodeA location fieldNames rowNum row)
-                (decodeB location fieldNames rowNum row)
+            case ( decodeA location fieldNames rowNum row, decodeB location fieldNames rowNum row ) of
+                ( Ok a, Ok b ) ->
+                    Ok (transform a b)
+
+                ( Err a, Err b ) ->
+                    Err (a ++ b)
+
+                ( Err a, _ ) ->
+                    Err a
+
+                ( _, Err b ) ->
+                    Err b
         )
 
 
@@ -734,10 +884,35 @@ map3 : (a -> b -> c -> d) -> Decoder a -> Decoder b -> Decoder c -> Decoder d
 map3 transform (Decoder decodeA) (Decoder decodeB) (Decoder decodeC) =
     Decoder
         (\location fieldNames rowNum row ->
-            Result.map3 transform
-                (decodeA location fieldNames rowNum row)
-                (decodeB location fieldNames rowNum row)
-                (decodeC location fieldNames rowNum row)
+            case
+                ( decodeA location fieldNames rowNum row
+                , decodeB location fieldNames rowNum row
+                , decodeC location fieldNames rowNum row
+                )
+            of
+                ( Ok a, Ok b, Ok c ) ->
+                    Ok (transform a b c)
+
+                ( Err a, Err b, Err c ) ->
+                    Err (a ++ b ++ c)
+
+                ( Err a, Err b, _ ) ->
+                    Err (a ++ b)
+
+                ( _, Err b, Err c ) ->
+                    Err (b ++ c)
+
+                ( Err a, _, Err c ) ->
+                    Err (a ++ c)
+
+                ( _, _, Err c ) ->
+                    Err c
+
+                ( _, Err b, _ ) ->
+                    Err b
+
+                ( Err a, _, _ ) ->
+                    Err a
         )
 
 
@@ -823,13 +998,16 @@ recover (Decoder first) (Decoder second) =
                 Ok value ->
                     Ok value
 
-                Err err ->
+                Err errs ->
                     case second location fieldNames rowNum row of
                         Ok value ->
                             Ok value
 
-                        Err { problems } ->
-                            Err { err | problems = err.problems ++ problems }
+                        Err [ OneOfDecodingError _ problems ] ->
+                            Err [ OneOfDecodingError rowNum (errs ++ problems) ]
+
+                        Err problems ->
+                            Err [ OneOfDecodingError rowNum (errs ++ problems) ]
 
 
 {-| Decode some value _and then_ make a decoding decision based on the
@@ -887,10 +1065,12 @@ fail message =
     Decoder
         (\location fieldNames rowNum _ ->
             Err
-                { row = rowNum
-                , column = locationToColumn fieldNames location
-                , problems = [ Failure message ]
-                }
+                [ FieldDecodingError
+                    { row = rowNum
+                    , column = locationToColumn fieldNames location
+                    , problem = Failure message
+                    }
+                ]
         )
 
 

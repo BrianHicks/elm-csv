@@ -31,10 +31,11 @@ stringTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedOneColumn 2 ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedOneColumn 2
+                                    }
                                 ]
                             )
                         )
@@ -61,10 +62,11 @@ intTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedInt "a" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedInt "a"
+                                    }
                                 ]
                             )
                         )
@@ -75,10 +77,11 @@ intTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedOneColumn 2 ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedOneColumn 2
+                                    }
                                 ]
                             )
                         )
@@ -110,10 +113,11 @@ floatTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedFloat "a" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedFloat "a"
+                                    }
                                 ]
                             )
                         )
@@ -124,10 +128,11 @@ floatTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedOneColumn 2 ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedOneColumn 2
+                                    }
                                 ]
                             )
                         )
@@ -159,10 +164,11 @@ blankTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.ExpectedInt "banana" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.ExpectedInt "banana"
+                                    }
                                 ]
                             )
                         )
@@ -194,10 +200,11 @@ columnTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = Column 1
-                                  , problems = [ Decode.ColumnNotFound 1 ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = Column 1
+                                    , problem = Decode.ColumnNotFound 1
+                                    }
                                 ]
                             )
                         )
@@ -213,13 +220,7 @@ fieldTest =
                     |> Decode.decodeCsv NoFieldNames (Decode.field "Name" Decode.string)
                     |> Expect.equal
                         (Err
-                            (DecodingErrors
-                                [ { row = 0
-                                  , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotProvided "Name" ]
-                                  }
-                                ]
-                            )
+                            (DecodingErrors [ Decode.FieldNotProvided "Name" ])
                         )
         , test "fails when the provided headers don't contain the name" <|
             \_ ->
@@ -230,10 +231,7 @@ fieldTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotProvided "Name" ]
-                                  }
+                                [ Decode.FieldNotProvided "Name"
                                 ]
                             )
                         )
@@ -246,11 +244,7 @@ fieldTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 1
-                                  , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotProvided "Name" ]
-                                  }
-                                ]
+                                [ Decode.FieldNotProvided "Name" ]
                             )
                         )
         , test "fails when there is no first row" <|
@@ -269,11 +263,7 @@ fieldTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 1
-                                  , column = Field "Name" Nothing
-                                  , problems = [ Decode.FieldNotProvided "Name" ]
-                                  }
-                                ]
+                                [ Decode.FieldNotProvided "Name" ]
                             )
                         )
         , test "fails when the associated column is not present in the row" <|
@@ -285,10 +275,11 @@ fieldTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 1
-                                  , column = Field "Other" (Just 1)
-                                  , problems = [ Decode.FieldNotFound "Other" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 1
+                                    , column = Field "Other" (Just 1)
+                                    , problem = Decode.FieldNotFound "Other"
+                                    }
                                 ]
                             )
                         )
@@ -324,10 +315,11 @@ fieldTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 1
-                                  , column = Field "Number" (Just 0)
-                                  , problems = [ Decode.ExpectedInt "not a number" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 1
+                                    , column = Field "Number" (Just 0)
+                                    , problem = Decode.ExpectedInt "not a number"
+                                    }
                                 ]
                             )
                         )
@@ -396,14 +388,23 @@ oneOfTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems =
-                                        [ Decode.Failure "ONE"
-                                        , Decode.Failure "TWO"
-                                        , Decode.Failure "THREE"
-                                        ]
-                                  }
+                                [ Decode.OneOfDecodingError 0
+                                    [ Decode.FieldDecodingError
+                                        { row = 0
+                                        , column = OnlyColumn
+                                        , problem = Decode.Failure "ONE"
+                                        }
+                                    , Decode.FieldDecodingError
+                                        { row = 0
+                                        , column = OnlyColumn
+                                        , problem = Decode.Failure "TWO"
+                                        }
+                                    , Decode.FieldDecodingError
+                                        { row = 0
+                                        , column = OnlyColumn
+                                        , problem = Decode.Failure "THREE"
+                                        }
+                                    ]
                                 ]
                             )
                         )
@@ -436,10 +437,11 @@ failTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.Failure "a nice description" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.Failure "a nice description"
+                                    }
                                 ]
                             )
                         )
@@ -450,14 +452,16 @@ failTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.Failure "a nice description" ]
-                                  }
-                                , { row = 1
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.Failure "a nice description" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.Failure "a nice description"
+                                    }
+                                , Decode.FieldDecodingError
+                                    { row = 1
+                                    , column = OnlyColumn
+                                    , problem = Decode.Failure "a nice description"
+                                    }
                                 ]
                             )
                         )
@@ -493,10 +497,11 @@ andThenTest =
                         |> Expect.equal
                             (Err
                                 (DecodingErrors
-                                    [ { row = 0
-                                      , column = OnlyColumn
-                                      , problems = [ Decode.Failure "Only positive integers are allowed!" ]
-                                      }
+                                    [ Decode.FieldDecodingError
+                                        { row = 0
+                                        , column = OnlyColumn
+                                        , problem = Decode.Failure "Only positive integers are allowed!"
+                                        }
                                     ]
                                 )
                             )
@@ -525,10 +530,11 @@ andThenTest =
                         |> Expect.equal
                             (Err
                                 (DecodingErrors
-                                    [ { row = 0
-                                      , column = Column 3
-                                      , problems = [ Decode.ColumnNotFound 3 ]
-                                      }
+                                    [ Decode.FieldDecodingError
+                                        { row = 0
+                                        , column = Column 3
+                                        , problem = Decode.ColumnNotFound 3
+                                        }
                                     ]
                                 )
                             )
@@ -557,10 +563,11 @@ fromResultTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.Failure "\"banana\" is not a valid hexadecimal string because n is not a valid hexadecimal character." ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.Failure "\"banana\" is not a valid hexadecimal string because n is not a valid hexadecimal character."
+                                    }
                                 ]
                             )
                         )
@@ -588,11 +595,54 @@ fromMaybeTest =
                     |> Expect.equal
                         (Err
                             (DecodingErrors
-                                [ { row = 0
-                                  , column = OnlyColumn
-                                  , problems = [ Decode.Failure "Expected an int" ]
-                                  }
+                                [ Decode.FieldDecodingError
+                                    { row = 0
+                                    , column = OnlyColumn
+                                    , problem = Decode.Failure "Expected an int"
+                                    }
                                 ]
                             )
                         )
+        ]
+
+
+testErrorToString : Test
+testErrorToString =
+    describe "errorToString"
+        [ test "groups simple errors" <|
+            \() ->
+                "a\na\na"
+                    |> Decode.decodeCsv NoFieldNames Decode.int
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "There was a problem on rows 0–2, column 0 (the only column present): I could not parse an int from `a`.")
+        , test "groups simple errors in more complex settings - errors are sorted by row occurence" <|
+            \() ->
+                "a\na\nb\na\na"
+                    |> Decode.decodeCsv NoFieldNames Decode.int
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "I saw 3 problems while decoding this CSV:\n\nThere was a problem on rows 0 and 1, column 0 (the only column present): I could not parse an int from `a`.\n\nThere was a problem on row 2, column 0 (the only column present): I could not parse an int from `b`.\n\nThere was a problem on rows 3 and 4, column 0 (the only column present): I could not parse an int from `a`.")
+        , test "works with map2" <|
+            \() ->
+                "foo,bar\na,2\na,b\na,c"
+                    |> Decode.decodeCsv FieldNamesFromFirstRow (Decode.map2 Tuple.pair (Decode.field "foo" Decode.int) (Decode.field "bar" Decode.int))
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "I saw 3 problems while decoding this CSV:\n\nThere was a problem on rows 1–3, in the `foo` field (column 0): I could not parse an int from `a`.\n\nThere was a problem on row 2, in the `bar` field (column 1): I could not parse an int from `b`.\n\nThere was a problem on row 3, in the `bar` field (column 1): I could not parse an int from `c`.")
+        , test "works with oneOf" <|
+            \() ->
+                "a\n1\n1.2"
+                    |> Decode.decodeCsv NoFieldNames (Decode.oneOf (Decode.map toFloat Decode.int) [ Decode.float ])
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "There was a problem on row 0 - all of the following decoders failed, but at least one must succeed:\n  (1) column 0 (the only column present): I could not parse an int from `a`.\n  (2) column 0 (the only column present): I could not parse a float from `a`.")
+        , test "works with nested oneOf" <|
+            \() ->
+                "a\n1\n1.2"
+                    |> Decode.decodeCsv NoFieldNames (Decode.oneOf Decode.float [ Decode.oneOf (Decode.map toFloat Decode.int) [ Decode.float ] ])
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "There was a problem on row 0 - all of the following decoders failed, but at least one must succeed:\n  (1) column 0 (the only column present): I could not parse a float from `a`.\n  (2) column 0 (the only column present): I could not parse an int from `a`.\n  (3) column 0 (the only column present): I could not parse a float from `a`.")
+        , test "works with complex decoder" <|
+            \() ->
+                "foo,bar\na,2\na,b\na,c"
+                    |> Decode.decodeCsv FieldNamesFromFirstRow (Decode.map2 Tuple.pair (Decode.oneOf (Decode.field "foo" Decode.int) [ Decode.field "bar" (Decode.map round Decode.float) ]) (Decode.field "bar" Decode.int))
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "I saw 4 problems while decoding this CSV:\n\nThere was a problem on row 2, in the `bar` field (column 1): I could not parse an int from `b`.\n\nThere was a problem on row 2 - all of the following decoders failed, but at least one must succeed:\n  (1) in the `foo` field (column 0): I could not parse an int from `a`.\n  (2) in the `bar` field (column 1): I could not parse a float from `b`.\n\nThere was a problem on row 3, in the `bar` field (column 1): I could not parse an int from `c`.\n\nThere was a problem on row 3 - all of the following decoders failed, but at least one must succeed:\n  (1) in the `foo` field (column 0): I could not parse an int from `a`.\n  (2) in the `bar` field (column 1): I could not parse a float from `c`.")
         ]
