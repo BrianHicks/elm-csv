@@ -3,7 +3,7 @@ module Csv.Decode exposing
     , column, field, optionalColumn, optionalField
     , FieldNames(..), decodeCsv, decodeCustom, Error(..), DecodingError(..), errorToString, Column(..), Problem(..)
     , map, map2, map3, into, pipeline
-    , oneOf, andThen, succeed, fail, fromResult, fromMaybe
+    , oneOf, andThen, succeed, fail, fromResult, fromMaybe, availableFields
     )
 
 {-| Decode values from CSV. This package tries to be as
@@ -85,7 +85,7 @@ that takes more arguments.
 
 ## Fancy Decoding
 
-@docs oneOf, andThen, succeed, fail, fromResult, fromMaybe
+@docs oneOf, andThen, succeed, fail, fromResult, fromMaybe, availableFields
 
 -}
 
@@ -394,6 +394,21 @@ optionalField name (Decoder decoder) =
 
             else
                 Ok Nothing
+        )
+
+
+{-| Returns all available field names. The behavior depends on your configuration:
+
+  - `NoFieldNames`: Always decodes to an empty list.
+  - `CustomFieldNames`: Decodes to the provided list.
+  - `FieldNamesFromFirstRow`: Returns the first row of the CSV.
+
+-}
+availableFields : Decoder (List String)
+availableFields =
+    Decoder
+        (\_ fieldNames _ _ ->
+            Ok (Dict.keys fieldNames)
         )
 
 
