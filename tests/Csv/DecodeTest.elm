@@ -646,3 +646,40 @@ testErrorToString =
                     |> Result.mapError Decode.errorToString
                     |> Expect.equal (Err "I saw 4 problems while decoding this CSV:\n\nThere was a problem on row 2, in the `bar` field (column 1): I could not parse an int from `b`.\n\nThere was a problem on row 2 - all of the following decoders failed, but at least one must succeed:\n  (1) in the `foo` field (column 0): I could not parse an int from `a`.\n  (2) in the `bar` field (column 1): I could not parse a float from `b`.\n\nThere was a problem on row 3, in the `bar` field (column 1): I could not parse an int from `c`.\n\nThere was a problem on row 3 - all of the following decoders failed, but at least one must succeed:\n  (1) in the `foo` field (column 0): I could not parse an int from `a`.\n  (2) in the `bar` field (column 1): I could not parse a float from `c`.")
         ]
+
+
+availableFieldsTest : Test
+availableFieldsTest =
+    describe "availableFields"
+        [ test "returns header row in order" <|
+            \() ->
+                "foo,bar\na,a\na,b\na,c"
+                    |> Decode.decodeCsv FieldNamesFromFirstRow Decode.availableFields
+                    |> Expect.equal (Ok [ [ "foo", "bar" ], [ "foo", "bar" ], [ "foo", "bar" ] ])
+        , test "allows conditional decoding based on header row" <|
+            \() ->
+                "foo,bar\na,a\na,b\na,c"
+                    |> Decode.decodeCsv FieldNamesFromFirstRow
+                        (Decode.availableFields
+                            |> Decode.andThen
+                                (\headers ->
+                                    if List.member "bar" headers then
+                                        Decode.field "bar" Decode.string
+
+                                    else
+                                        Decode.field "foo" Decode.string
+                                )
+                        )
+                    |> Expect.equal (Ok [ "a", "b", "c" ])
+        , test "returns configured fields" <|
+            \() ->
+                "\n"
+                    |> Decode.decodeCsv (CustomFieldNames [ "Foo", "Bar" ]) Decode.availableFields
+                    |> Expect.equal (Ok [ [ "Foo", "Bar" ] ])
+        , test "fails when no named fields" <|
+            \() ->
+                "\n"
+                    |> Decode.decodeCsv NoFieldNames Decode.availableFields
+                    |> Result.mapError Decode.errorToString
+                    |> Expect.equal (Err "Asked for available fields, but none were provided")
+        ]

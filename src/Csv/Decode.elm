@@ -103,24 +103,30 @@ if you have a `Pet` data type, you'd want a `Decoder Pet`.
 type Decoder a
     = Decoder
         (Location
-         -> Dict String Int
+         -> ResolvedNames
          -> Int
          -> List String
          -> Result (List DecodingError) a
         )
 
 
+type alias ResolvedNames =
+    { names : Dict String Int
+    , available : Bool
+    }
+
+
 fromString : (String -> Result Problem a) -> Decoder a
 fromString convert =
     Decoder <|
-        \location fieldNames rowNum row ->
+        \location { names } rowNum row ->
             let
                 error : Problem -> Result (List DecodingError) a
                 error problem =
                     Err
                         [ FieldDecodingError
                             { row = rowNum
-                            , column = locationToColumn fieldNames location
+                            , column = locationToColumn names location
                             , problem = problem
                             }
                         ]
@@ -140,7 +146,7 @@ fromString convert =
                             error (ColumnNotFound colNum)
 
                 Field_ name ->
-                    case Dict.get name fieldNames of
+                    case Dict.get name names of
                         Just colNum ->
                             case row |> List.drop colNum |> List.head of
                                 Just value ->
@@ -389,7 +395,7 @@ optionalField : String -> Decoder a -> Decoder (Maybe a)
 optionalField name (Decoder decoder) =
     Decoder
         (\_ fieldNames rowNum row ->
-            if Dict.member name fieldNames then
+            if Dict.member name fieldNames.names then
                 Result.map Just (decoder (Field_ name) fieldNames rowNum row)
 
             else
@@ -399,7 +405,7 @@ optionalField name (Decoder decoder) =
 
 {-| Returns all available field names. The behavior depends on your configuration:
 
-  - `NoFieldNames`: Always decodes to an empty list.
+  - `NoFieldNames`: The decoder fails.
   - `CustomFieldNames`: Decodes to the provided list.
   - `FieldNamesFromFirstRow`: Returns the first row of the CSV.
 
@@ -408,7 +414,15 @@ availableFields : Decoder (List String)
 availableFields =
     Decoder
         (\_ fieldNames _ _ ->
-            Ok (Dict.keys fieldNames)
+            if fieldNames.available then
+                Ok
+                    (Dict.toList fieldNames.names
+                        |> List.sortBy Tuple.second
+                        |> List.map Tuple.first
+                    )
+
+            else
+                Err [ NoFieldNamesProvided ]
         )
 
 
@@ -432,7 +446,7 @@ type FieldNames
     | FieldNamesFromFirstRow
 
 
-getFieldNames : FieldNames -> List (List String) -> Result Error ( Dict String Int, Int, List (List String) )
+getFieldNames : FieldNames -> List (List String) -> Result Error ( ResolvedNames, Int, List (List String) )
 getFieldNames headers rows =
     let
         fromList : List String -> Dict String Int
@@ -449,10 +463,10 @@ getFieldNames headers rows =
     in
     case headers of
         NoFieldNames ->
-            Ok ( Dict.empty, 0, rows )
+            Ok ( { names = Dict.empty, available = False }, 0, rows )
 
         CustomFieldNames names ->
-            Ok ( fromList names, 0, rows )
+            Ok ( { names = fromList names, available = True }, 0, rows )
 
         FieldNamesFromFirstRow ->
             case rows of
@@ -460,7 +474,7 @@ getFieldNames headers rows =
                     Err NoFieldNamesOnFirstRow
 
                 first :: rest ->
-                    Ok ( fromList (List.map String.trim first), 1, rest )
+                    Ok ( { names = fromList (List.map String.trim first), available = True }, 1, rest )
 
 
 {-| Convert a CSV string into some type you care about using the
@@ -559,12 +573,14 @@ type Error
   - A result of a [`oneOf`](#oneOf) where all branches failed (`OneOfDecodingError`).
   - A problem with the header row or configuration where a column is simply
     missing (`FieldNotProvided`).
+  - Calling `availableFields` when `NoFieldNames` was passed.
 
 -}
 type DecodingError
     = FieldDecodingError { row : Int, column : Column, problem : Problem }
     | OneOfDecodingError Int (List DecodingError)
     | FieldNotProvided String
+    | NoFieldNamesProvided
 
 
 {-| Where did the problem happen?
@@ -703,6 +719,9 @@ errorToString error =
                         FieldNotProvided name ->
                             "field " ++ name ++ "was not provided"
 
+                        NoFieldNamesProvided ->
+                            "Asked for available fields, but none were provided"
+
                 topLevelErrString : { startRow : Int, endRow : Int, error : DecodingError } -> String
                 topLevelErrString err =
                     (case err.error of
@@ -714,6 +733,9 @@ errorToString error =
 
                         FieldNotProvided _ ->
                             "There was a problem in the header: "
+
+                        NoFieldNamesProvided ->
+                            ""
                     )
                         ++ errString err.error
 
@@ -739,6 +761,9 @@ errorToString error =
                             row
 
                         FieldNotProvided _ ->
+                            0
+
+                        NoFieldNamesProvided ->
                             0
 
                 dedupeHelp :
@@ -801,6 +826,9 @@ errorToString error =
 
                                 FieldNotProvided name ->
                                     ( 8, name, 0 )
+
+                                NoFieldNamesProvided ->
+                                    ( 9, "", 0 )
                         )
                         >> dedupeHelp [] []
                         >> List.sortBy (\{ startRow } -> startRow)
@@ -1063,11 +1091,11 @@ succeed value =
 fail : String -> Decoder a
 fail message =
     Decoder
-        (\location fieldNames rowNum _ ->
+        (\location { names } rowNum _ ->
             Err
                 [ FieldDecodingError
                     { row = rowNum
-                    , column = locationToColumn fieldNames location
+                    , column = locationToColumn names location
                     , problem = Failure message
                     }
                 ]
