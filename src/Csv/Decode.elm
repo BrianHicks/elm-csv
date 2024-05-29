@@ -717,7 +717,7 @@ errorToString error =
                                     )
 
                         FieldNotProvided name ->
-                            "field " ++ name ++ "was not provided"
+                            "field " ++ name ++ " was not provided"
 
                         NoFieldNamesProvided ->
                             "Asked for available fields, but none were provided"
